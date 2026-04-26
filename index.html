@@ -431,11 +431,17 @@ function buildDailyYearSignals(data, startYr, endYr){
 // 시장 필터 (SPY EMA20) + 모멘텀 보너스 추가
 function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate, years){
   console.log(`▶ simulate 시작 (${startDate} ~ ${endDate})`);
-  // 전체 주 목록
-  const allDates=[...new Set(
-    Object.values(portWeeklySignals).flatMap(sigs=>sigs.map(s=>s.date))
-  )].filter(d=>d>=startDate&&d<=endDate).sort();
-  console.log(`  총 ${allDates.length}주`);
+
+  // 메인 ETF 중 가장 데이터 많은 것 기준으로 날짜 생성 (QQQ가 보통 가장 김)
+  const mainSigs = portWeeklySignals['QQQ'] || [];
+  const allDates = mainSigs.map(s => s.date).filter(d => d >= startDate && d <= endDate);
+  console.log(`  총 ${allDates.length}주 (QQQ 기준)`);
+
+  // 안전장치: 너무 많으면 자르기
+  if(allDates.length > 600){
+    console.log('⚠️ 너무 많은 주 데이터, 600주로 제한');
+    allDates.length = 600;
+  }
 
   // SPY 신호 맵: 날짜 → 시장 상태
   const spyMap={};
@@ -986,9 +992,29 @@ async function run(){
   const weeklyTickers=[...PORT.map(p=>p.t), 'SPY'];
   const dailyTickers=[];
 
-  // ── 캐시 확인 ──
+  // ── 캐시 확인 (검증 포함) ──
   let weeklyData = loadCache();
-  if(weeklyData && weeklyTickers.every(t => weeklyData[t] && weeklyData[t].length>0)){
+  let cacheValid = false;
+  if(weeklyData){
+    cacheValid = weeklyTickers.every(t => {
+      const arr = weeklyData[t];
+      if(!arr || arr.length === 0) return false;
+      // 첫 번째 데이터가 정상 형식인지 확인
+      const first = arr[0];
+      if(!first || !first.date || typeof first.close !== 'number' || isNaN(first.close)) return false;
+      return true;
+    });
+    if(cacheValid){
+      console.log(`✅ 캐시 검증 통과 (${weeklyTickers.length}개 종목)`);
+      // 각 종목 길이 출력
+      weeklyTickers.forEach(t => console.log(`  ${t}: ${weeklyData[t].length} weeks`));
+    } else {
+      console.log('⚠️ 캐시 손상됨, 새로 로드');
+      weeklyData = null;
+    }
+  }
+
+  if(cacheValid){
     console.log('⚡ 캐시 사용 - API 호출 건너뜀');
     setP('⚡ 캐시에서 데이터 로드');
   } else {
