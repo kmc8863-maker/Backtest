@@ -120,6 +120,8 @@ canvas{width:100%;height:220px;display:block;}
 
   <div style="margin-top:10px;">
     <button class="btn btn-main" id="btnRun" onclick="run()">▶ 백테스팅 실행</button>
+    <button class="btn" id="btnClearCache" onclick="clearCache();alert('캐시 삭제 완료. 다음 실행 시 새 데이터 로드');" style="background:rgba(255,64,96,.15);color:var(--rd);font-size:.6rem;padding:8px 12px;margin-left:6px;border:1px solid rgba(255,64,96,.3);">🗑️ 캐시 삭제</button>
+    <span id="cacheStatus" style="margin-left:10px;font-size:.62rem;color:var(--dm);font-family:'Space Mono',monospace;"></span>
   </div>
   <div class="prog-wrap" id="progWrap">
     <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
@@ -219,6 +221,47 @@ console.log = function(...args){
 };
 
 const TD='aa87760dae7b4654a35d136302b3ea0e';
+
+// ─── 캐싱 시스템 (localStorage 7일 유효) ───
+const CACHE_KEY = 'backtest_weekly_data_v1';
+const CACHE_DAYS = 7;
+
+function saveCache(data){
+  try{
+    const payload = {timestamp: Date.now(), data};
+    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+    console.log('💾 캐시 저장 완료');
+  }catch(e){
+    console.log('캐시 저장 실패:', e.message);
+  }
+}
+
+function loadCache(){
+  try{
+    const raw = localStorage.getItem(CACHE_KEY);
+    if(!raw) return null;
+    const payload = JSON.parse(raw);
+    const ageDays = (Date.now() - payload.timestamp) / (1000*60*60*24);
+    if(ageDays > CACHE_DAYS){
+      console.log(`캐시 만료 (${ageDays.toFixed(1)}일)`);
+      return null;
+    }
+    console.log(`✅ 캐시 사용 (${ageDays.toFixed(1)}일 전 데이터)`);
+    return payload.data;
+  }catch(e){
+    console.log('캐시 로드 실패:', e.message);
+    return null;
+  }
+}
+
+function clearCache(){
+  localStorage.removeItem(CACHE_KEY);
+  console.log('🗑️ 캐시 삭제됨');
+}
+
+// 전역 변수: 마지막 시뮬레이션에 사용된 신호 데이터 보관
+window.LAST_DATA = null;
+
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 const PORT=[
@@ -327,19 +370,23 @@ function buildWeeklySignals(data, startDate, endDate){
     // RSI 14 계산
     let rsi = 50;
     if(closes.length >= 15){
-      const changes = closes.slice(-15).map((v,i,a)=>i===0?0:v-a[i-1]).slice(1);
-      const gains = changes.map(c=>c>0?c:0);
-      const losses = changes.map(c=>c<0?-c:0);
-      const avgGain = gains.reduce((a,b)=>a+b,0)/14;
-      const avgLoss = losses.reduce((a,b)=>a+b,0)/14;
+      const closes15 = closes.slice(-15);
+      const changes = [];
+      for(let k=1;k<closes15.length;k++) changes.push(closes15[k]-closes15[k-1]);
+      let avgGain=0, avgLoss=0;
+      for(const c of changes){
+        if(c>0) avgGain+=c; else avgLoss-=c;
+      }
+      avgGain/=14; avgLoss/=14;
       rsi = avgLoss===0 ? 100 : 100 - 100/(1+avgGain/avgLoss);
     }
 
     // 4주 변동성 (표준편차 기반)
-    const last4w = closes.slice(-5);
     let vol4w = 0;
-    if(last4w.length>=5){
-      const rets = last4w.map((v,i,a)=>i===0?0:(v-a[i-1])/a[i-1]).slice(1);
+    if(closes.length>=5){
+      const last5 = closes.slice(-5);
+      const rets = [];
+      for(let k=1;k<last5.length;k++) rets.push((last5[k]-last5[k-1])/last5[k-1]);
       const mean = rets.reduce((a,b)=>a+b,0)/rets.length;
       vol4w = Math.sqrt(rets.reduce((s,r)=>s+Math.pow(r-mean,2),0)/rets.length);
     }
@@ -383,10 +430,12 @@ function buildDailyYearSignals(data, startYr, endYr){
 // ── 메인 시뮬레이션 (주별 롤링) ──
 // 시장 필터 (SPY EMA20) + 모멘텀 보너스 추가
 function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate, years){
+  console.log(`▶ simulate 시작 (${startDate} ~ ${endDate})`);
   // 전체 주 목록
   const allDates=[...new Set(
     Object.values(portWeeklySignals).flatMap(sigs=>sigs.map(s=>s.date))
   )].filter(d=>d>=startDate&&d<=endDate).sort();
+  console.log(`  총 ${allDates.length}주`);
 
   // SPY 신호 맵: 날짜 → 시장 상태
   const spyMap={};
@@ -615,6 +664,7 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
   const neg=yrReturns.filter(r=>r<0).length;
   const qqqTotal=qqqValue-1;
 
+  console.log(`◀ simulate 완료: ${(totalReturn*100).toFixed(1)}%`);
   return{totalReturn,cagr,mdd,neg,yearlyRows,equityCurve,qqqTotal};
 }
 
@@ -935,55 +985,90 @@ async function run(){
 
   const weeklyTickers=[...PORT.map(p=>p.t), 'SPY'];
   const dailyTickers=[];
-  progMax=weeklyTickers.length+2; // +2: 5년/10년 시뮬레이션
-  progCur=0;
 
-  // 주봉 데이터 수집 (rate limit 시 자동 재시도)
-  const weeklyData={};
-  for(const t of weeklyTickers){
-    setP(`📊 ${t} 주봉 로딩...`);
-    let attempt=0, success=false;
-    while(attempt<3 && !success){
-      try{
-        weeklyData[t]=await fetchSeries(t,'1week',12);
-        console.log(`✓ ${t}: ${weeklyData[t].length} weeks 로드됨`);
-        success=true;
-      }
-      catch(e){
-        attempt++;
-        if(e.message&&e.message.includes('credits')){
-          // Rate limit - 65초 대기 (다음 분 보장)
-          console.log(`⏳ ${t} rate limit, 65초 대기 후 재시도 (${attempt}/3)...`);
-          setP(`⏳ ${t} API 한도 대기 중 (65초)...`);
-          await sleep(65000);
-        } else {
-          console.log(`✗ ${t} 실패: ${e.message}`);
-          weeklyData[t]=[];
-          break;
+  // ── 캐시 확인 ──
+  let weeklyData = loadCache();
+  if(weeklyData && weeklyTickers.every(t => weeklyData[t] && weeklyData[t].length>0)){
+    console.log('⚡ 캐시 사용 - API 호출 건너뜀');
+    setP('⚡ 캐시에서 데이터 로드');
+  } else {
+    weeklyData = {};
+    progMax = weeklyTickers.length + 2;
+    progCur = 0;
+    console.log('🌐 API에서 새로 로드');
+
+    // 주봉 데이터 수집 (rate limit 시 자동 재시도)
+    for(const t of weeklyTickers){
+      setP(`📊 ${t} 주봉 로딩...`);
+      let attempt=0, success=false;
+      while(attempt<3 && !success){
+        try{
+          weeklyData[t]=await fetchSeries(t,'1week',12);
+          console.log(`✓ ${t}: ${weeklyData[t].length} weeks 로드됨`);
+          success=true;
+        }
+        catch(e){
+          attempt++;
+          if(e.message&&e.message.includes('credits')){
+            console.log(`⏳ ${t} rate limit, 65초 대기 (${attempt}/3)...`);
+            setP(`⏳ ${t} API 한도 대기 중 (65초)...`);
+            await sleep(65000);
+          } else {
+            console.log(`✗ ${t} 실패: ${e.message}`);
+            weeklyData[t]=[];
+            break;
+          }
         }
       }
+      if(!success && !weeklyData[t]) weeklyData[t]=[];
+      await sleep(9500);
     }
-    if(!success && !weeklyData[t]) weeklyData[t]=[];
-    await sleep(9500);
+
+    // 캐시 저장
+    saveCache(weeklyData);
   }
+
+  // 전역 보관 (옵션 변경 시 재계산용)
+  window.WEEKLY_DATA = weeklyData;
 
   // 3배는 주봉 데이터 재활용 (추가 API 호출 없음)
   // 주봉 신호 강할 때(6점↑) → 해당 수익률×3×0.82 적용
   const dailyData={};
 
   setP('주봉 신호 계산 중 (매주 롤링)...');
+  console.log('🔄 신호 계산 시작');
 
   // 매주 신호 계산
   const portWeeklySignals={};
   for(const item of PORT){
-    portWeeklySignals[item.t]=weeklyData[item.t]?.length>0
-      ?buildWeeklySignals(weeklyData[item.t],startDate,endDate)
-      :[];
+    try{
+      const len = weeklyData[item.t]?.length || 0;
+      console.log(`  ${item.t} 신호 계산 중 (${len} weeks)...`);
+      const t0 = Date.now();
+      portWeeklySignals[item.t]=len>0
+        ?buildWeeklySignals(weeklyData[item.t],startDate,endDate)
+        :[];
+      console.log(`  ✓ ${item.t} 완료 (${portWeeklySignals[item.t].length}개 신호, ${Date.now()-t0}ms)`);
+    }catch(e){
+      console.log(`  ✗ ${item.t} 신호 계산 에러: ${e.message}`);
+      portWeeklySignals[item.t]=[];
+    }
+    // 화면 갱신 시간 줘서 멈춤 방지
+    await sleep(10);
   }
+
   // SPY 시장 필터 신호
-  const spySignals=weeklyData['SPY']?.length>0
-    ?buildWeeklySignals(weeklyData['SPY'],startDate,endDate)
-    :[];
+  console.log('  SPY 신호 계산 중...');
+  let spySignals=[];
+  try{
+    spySignals=weeklyData['SPY']?.length>0
+      ?buildWeeklySignals(weeklyData['SPY'],startDate,endDate)
+      :[];
+    console.log(`  ✓ SPY 완료 (${spySignals.length}개)`);
+  }catch(e){
+    console.log(`  ✗ SPY 에러: ${e.message}`);
+  }
+  await sleep(10);
 
   // 일봉 연도별 신호 (3배용)
   // 3배 신호: 주봉 데이터 재활용 (이미 로드된 데이터)
@@ -1023,10 +1108,15 @@ async function run(){
   // 시뮬레이션
   // ── 5년 + 10년 동시 시뮬레이션 ──
   setP('5년 시뮬레이션 중...');
+  console.log('⏰ 5년 시뮬레이션');
+  await sleep(50);
   const res5 = simulate(portWeeklySignals,spySignals,rebalWeeks,'2021-01-01',endDate,years5);
   const lev5 = simLev(res5,portDailySignals,years5,maxLevPct);
+  await sleep(50);
 
   setP('10년 시뮬레이션 중...');
+  console.log('⏰ 10년 시뮬레이션');
+  await sleep(50);
   const res10 = simulate(portWeeklySignals,spySignals,rebalWeeks,startDate,endDate,years10);
   const lev10 = simLev(res10,portDailySignals,years10,maxLevPct);
 
@@ -1090,7 +1180,37 @@ async function run(){
   btn.disabled=false;
 }
 
-// 고정값 사용으로 이벤트 리스너 불필요
+// 옵션 체크박스 자동 재계산 (캐시 데이터 있을 때)
+const optIds = ['optRsiPenalty','optRsiBonus','optVolAdj','optPullback'];
+optIds.forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', () => {
+    if(window.WEEKLY_DATA){
+      console.log('⚡ 옵션 변경 - 즉시 재계산');
+      run();
+    }
+  });
+});
+
+// 캐시 상태 표시
+function updateCacheStatus(){
+  const raw = localStorage.getItem(CACHE_KEY);
+  const el = document.getElementById('cacheStatus');
+  if(!el) return;
+  if(!raw){
+    el.textContent = '캐시 없음 (첫 실행 시 약 2분 소요)';
+    el.style.color = 'var(--dm)';
+  } else {
+    try{
+      const p = JSON.parse(raw);
+      const ageHrs = ((Date.now() - p.timestamp) / (1000*60*60)).toFixed(1);
+      el.textContent = `💾 캐시 ${ageHrs}시간 전 (옵션 변경 시 즉시 재계산)`;
+      el.style.color = 'var(--gn)';
+    }catch(e){ el.textContent = '캐시 오류'; }
+  }
+}
+updateCacheStatus();
+setInterval(updateCacheStatus, 30000);
 </script>
 </body>
 </html>
