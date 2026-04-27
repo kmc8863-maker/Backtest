@@ -78,7 +78,7 @@ canvas{width:100%;height:220px;display:block;}
 <div class="wrap">
 
 <div class="hdr">
-  <h1>TREND FOLLOWING BACKTEST <span class="badge">v3.4 · 5년+10년</span></h1>
+  <h1>TREND FOLLOWING BACKTEST <span class="badge">v3.7 · 18년</span></h1>
   <div class="sub">3배 20% 고정 · 매주 리밸런싱 · 5년+10년 동시 결과 · 역방향 옵션</div>
 </div>
 
@@ -103,6 +103,40 @@ canvas{width:100%;height:220px;display:block;}
     <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;">
       <input type="checkbox" id="optPullback" style="cursor:pointer;">
       <span><strong style="color:var(--gn)">눌림목 추가매수</strong> — 정배열 유지 + 직전주 -3%↓ 시 비중 +3%</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;border-top:1px solid var(--bd);margin-top:6px;padding-top:8px;">
+      <input type="checkbox" id="optStrictEntry" style="cursor:pointer;">
+      <span><strong style="color:var(--yl)">⚡ 진입 강화</strong> — 7점 이상만 매수 (강한 추세만)</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;">
+      <input type="checkbox" id="optFastExit" style="cursor:pointer;">
+      <span><strong style="color:var(--yl)">⚡ 손절 강화</strong> — EMA10 이탈 시 즉시 청산</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;">
+      <input type="checkbox" id="optMomWeight" style="cursor:pointer;">
+      <span><strong style="color:var(--yl)">⚡ 모멘텀 가중</strong> — 4주 수익률 +5%↑ 시 비중 +5%</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;">
+      <input type="checkbox" id="optDynLev" style="cursor:pointer;">
+      <span><strong style="color:var(--yl)">⚡ 3배 동적 비중</strong> — 점수 8↑ 25%, 6~7 15%, 5↓ 5%</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;border-top:1px solid var(--bd);margin-top:6px;padding-top:8px;">
+      <input type="checkbox" id="optCycleBoost" style="cursor:pointer;">
+      <span><strong style="color:var(--or)">🔄 사이클 ETF 가산</strong> — TLT/DBC/EEM/VNQ/REMX 신호 시 비중 +5%</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;">
+      <input type="checkbox" id="optWhipsaw" style="cursor:pointer;">
+      <span><strong style="color:var(--or)">🔄 휩소 방지</strong> — 청산 후 2주 재진입 금지</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:4px 0;">
+      <input type="checkbox" id="optStrongTrend" style="cursor:pointer;">
+      <span><strong style="color:var(--or)">🔄 강한 추세 필터</strong> — 4주 모멘텀 양수일 때만 매수</span>
+    </label>
+
+    <!-- 드로다운 트리거 (강조) -->
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:6px;border-top:2px solid var(--rd);margin-top:8px;padding-top:10px;background:rgba(255,64,96,.05);border-radius:6px;">
+      <input type="checkbox" id="optDrawdownMode" style="cursor:pointer;">
+      <span><strong style="color:var(--rd)">🚨 드로다운 분할 진입</strong> — QQQ 신고가 -20%/-30%/-40% 시 QQQ 30%/60%/100% 바이앤홀드</span>
     </label>
   </div>
 
@@ -143,17 +177,20 @@ canvas{width:100%;height:220px;display:block;}
 
 <div id="results" class="hidden">
 
+  <!-- 요약 (맨 위) -->
+  <div class="info ok" id="infoResult" style="margin-bottom:14px;font-size:.85rem;line-height:1.8;padding:14px;border-left-width:4px;"></div>
+
   <!-- 1배 결과 -->
   <div class="cmp">
-    <div class="cmp-title" style="color:var(--cy)" id="res1xTitle">📈 1배 추세추종</div>
+    <div class="cmp-title" style="color:var(--cy)" id="res1xTitle">📈 5년 결과 (2021~2025)</div>
     <div class="stat-row" id="stats1x"></div>
   </div>
 
-  <!-- Equity curve canvas -->
+  <!-- 5년 자산 곡선 -->
   <div class="tbl-wrap">
-    <div class="tbl-hdr" style="color:var(--cy)">📈 자산 곡선 — 1억 투자 시 (포트 vs QQQ vs +3배)</div>
+    <div class="tbl-hdr" style="color:var(--cy)">📈 5년 자산 곡선 (2021~2025) · 1억 투자</div>
     <div class="chart-wrap">
-      <canvas id="equityCanvas"></canvas>
+      <canvas id="equityCanvas5"></canvas>
     </div>
   </div>
 
@@ -181,6 +218,13 @@ canvas{width:100%;height:220px;display:block;}
       <div class="stat-row" id="statsLev"></div>
       <div class="info pu" id="levSummary" style="margin-top:8px;"></div>
     </div>
+    <!-- 10년 자산 곡선 -->
+    <div class="tbl-wrap">
+      <div class="tbl-hdr" style="color:var(--pu)">📈 10년 자산 곡선 (2016~2025) · 1억 투자</div>
+      <div class="chart-wrap">
+        <canvas id="equityCanvas10"></canvas>
+      </div>
+    </div>
     <div class="tbl-wrap">
       <div class="tbl-hdr" style="color:var(--pu)">📊 10년 연도별 결과 (2016~2025 · 3배 20% 포함)</div>
       <table>
@@ -195,9 +239,36 @@ canvas{width:100%;height:220px;display:block;}
         <tbody id="bodyLev"></tbody>
       </table>
     </div>
+
+    <hr class="divider">
+    <div class="cmp" style="border-color:rgba(255,140,66,.3)">
+      <div class="cmp-title" style="color:var(--or)">📈 18년 결과 (2008~2025) — 금융위기 포함</div>
+      <div class="stat-row" id="stats18"></div>
+    </div>
+    <!-- 18년 자산 곡선 -->
+    <div class="tbl-wrap">
+      <div class="tbl-hdr" style="color:var(--or)">📈 18년 자산 곡선 (2008~2025) · 1억 투자</div>
+      <div class="chart-wrap">
+        <canvas id="equityCanvas18"></canvas>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr" style="color:var(--or)">📊 18년 연도별 결과 (2008~2025 · 3배 20% 포함)</div>
+      <table>
+        <thead><tr>
+          <th>연도</th>
+          <th>1배 수익</th>
+          <th>3배 진입 종목</th>
+          <th>3배 기여</th>
+          <th>합계</th>
+          <th>누적</th>
+        </tr></thead>
+        <tbody id="body18"></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="info ok" id="infoResult"></div>
+  <!-- infoResult moved to top -->
 </div>
 </div>
 
@@ -223,7 +294,7 @@ console.log = function(...args){
 const TD='aa87760dae7b4654a35d136302b3ea0e';
 
 // ─── 캐싱 시스템 (localStorage 7일 유효) ───
-const CACHE_KEY = 'backtest_weekly_data_v1';
+const CACHE_KEY = 'backtest_weekly_data_v2_18yr';
 const CACHE_DAYS = 7;
 
 function saveCache(data){
@@ -265,8 +336,9 @@ window.LAST_DATA = null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 const PORT=[
-  // 메인 ETF (6개)
+  // 메인 ETF (7개)
   {t:'QQQ', n:'Nasdaq100',   watch:false, cat:'main'},
+  {t:'SMH', n:'Semiconductors', watch:false, cat:'main'},
   {t:'ITA', n:'Defense',     watch:false, cat:'main'},
   {t:'URA', n:'Uranium',     watch:false, cat:'main'},
   {t:'GDX', n:'Gold Miners', watch:false, cat:'main'},
@@ -297,15 +369,25 @@ function setP(txt){
 
 // ── API ──
 async function fetchSeries(symbol,interval,years){
-  const size=interval==='1week'?Math.min(520,years*54+20):Math.min(500,years*252+20);
-  const r=await fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${size}&apikey=${TD}`);
-  const d=await r.json();
-  if(d.status==='error'||!d.values) throw new Error(d.message||'No data');
-  // Normalize datetime to YYYY-MM-DD regardless of time component
-  return d.values.slice().reverse().map(v=>({
-    date:v.datetime.substring(0,10),
-    close:parseFloat(v.close)
-  }));
+  const size=interval==='1week'?Math.min(1100,years*54+20):Math.min(500,years*252+20);
+  const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${size}&apikey=${TD}`;
+  // 30초 타임아웃 (모바일 백그라운드 hang 방지)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  try{
+    const r = await fetch(url, {signal: controller.signal});
+    clearTimeout(timeoutId);
+    const d = await r.json();
+    if(d.status==='error'||!d.values) throw new Error(d.message||'No data');
+    return d.values.slice().reverse().map(v=>({
+      date:v.datetime.substring(0,10),
+      close:parseFloat(v.close)
+    }));
+  }catch(e){
+    clearTimeout(timeoutId);
+    if(e.name === 'AbortError') throw new Error('30초 타임아웃');
+    throw e;
+  }
 }
 
 // ── Indicators (rolling) ──
@@ -416,6 +498,7 @@ async function buildWeeklySignals(data, startDate, endDate){
     if(price>e20)score++;if(aligned)score++;if(macdOk)score++;
     if(aligned&&macdOk)score++;
     const exitSignal=price<e20;
+    const exitSignalFast = price<e10; // 빠른 손절용
 
     // 52주 신고가 체크 (현재 i 기준 직전 52주 윈도우)
     const start52 = Math.max(0, i-52);
@@ -452,7 +535,7 @@ async function buildWeeklySignals(data, startDate, endDate){
     const weekChange = (price - prevClose) / prevClose;
 
     signals.push({
-      date:d.date,price,e5,e10,e20,hist,aligned,macdOk,score,exitSignal,
+      date:d.date,price,e5,e10,e20,hist,aligned,macdOk,score,exitSignal, exitSignalFast,
       buySignal:aligned&&macdOk&&score>=5,
       isNewHigh, mom4w, rsi, vol4w, weekChange
     });
@@ -493,25 +576,32 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
   const allDates = mainSigs.map(s => s.date).filter(d => d >= startDate && d <= endDate);
   console.log(`  총 ${allDates.length}주 (QQQ 기준)`);
 
-  // 안전장치: 너무 많으면 자르기
-  if(allDates.length > 600){
-    console.log('⚠️ 너무 많은 주 데이터, 600주로 제한');
-    allDates.length = 600;
-  }
+  // 18년까지 처리 가능 (~940주)
+  console.log(`  처리 범위: ${allDates[0]} ~ ${allDates[allDates.length-1]}`);
 
   // SPY 신호 맵: 날짜 → 시장 상태
   const spyMap={};
   for(const s of spySignals) spyMap[s.date]=s;
 
-  // 종목별 연속 상위 카운터 (모멘텀 보너스 B용)
-  const topRankStreak={}; // {ticker: 연속 상위 3위 안 든 주 수}
+  // 종목별 연속 상위 카운터
+  const topRankStreak={};
   PORT.forEach(p=>topRankStreak[p.t]=0);
+
+  // 휩소 방지: 청산 후 재진입 대기 카운터
+  const recentExit={}; // {ticker: 청산 후 경과 주 수}
+  PORT.forEach(p=>recentExit[p.t]=0);
+
+  // 드로다운 트리거 모드 추적
+  let qqqAllTimeHigh = 0; // 시뮬레이션 시작 후 QQQ 최고가
+  let drawdownStage = 0; // 0=정상, 1=-20%, 2=-30%, 3=-40%
+  // 드로다운 단계별 QQQ 비중 (포트 전체에서)
+  const DD_STAGES = [0, 0.30, 0.60, 1.00];
 
   // 포트 상태
   let portfolio={}; // {ticker: weight}
   PORT.forEach(p=>portfolio[p.t]=0);
   let cashPct=1.0;
-  let portValue=1.0; // 정규화된 포트 가치
+  let portValue=1.0;
 
   // QQQ 가치 추적 (바이앤홀드) - 시작시점 가격 고정
   let qqqValue=1.0;
@@ -562,15 +652,21 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
       qqqValue=weekSigs['QQQ'].price/qqqStartPrice;
     }
 
-    // ── 즉시 청산 체크 (EMA20 이탈) ──
+    // ── 즉시 청산 체크 ──
+    const optsForExit = window.STRATEGY_OPTS || {};
     for(const item of PORT){
       if(portfolio[item.t]>0){
         const sig=weekSigs[item.t];
-        if(sig&&sig.exitSignal){
+        if(!sig) continue;
+        const shouldExit = optsForExit.fastExit ? sig.exitSignalFast : sig.exitSignal;
+        if(shouldExit){
           cashPct+=portfolio[item.t];
           portfolio[item.t]=0;
+          recentExit[item.t] = 1; // 청산 카운터 시작
         }
       }
+      // 청산 후 경과 주 수 증가
+      if(recentExit[item.t] > 0) recentExit[item.t]++;
     }
 
     // ── 매주 리밸런싱 ──
@@ -582,9 +678,72 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
     const marketBullish = spy ? (spy.aligned && !spy.exitSignal) : true;
     const marketBear = spy ? spy.exitSignal : false;
 
+    // 드로다운 모드 감지 (QQQ 신고가 대비 현재 가격)
+    const optsForDD = window.STRATEGY_OPTS || {};
+    const qqqPrice = weekSigs['QQQ']?.price;
+    if(qqqPrice){
+      if(qqqPrice > qqqAllTimeHigh) qqqAllTimeHigh = qqqPrice;
+      if(qqqAllTimeHigh > 0){
+        const dd = (qqqPrice - qqqAllTimeHigh) / qqqAllTimeHigh;
+        // 드로다운 단계 결정 (한 단계씩 진입)
+        if(dd <= -0.40 && drawdownStage < 3) drawdownStage = 3;
+        else if(dd <= -0.30 && drawdownStage < 2) drawdownStage = 2;
+        else if(dd <= -0.20 && drawdownStage < 1) drawdownStage = 1;
+
+        // 회복: QQQ가 신고가의 95% 이상 + 현재 단계 1 이상
+        if(qqqPrice >= qqqAllTimeHigh * 0.95 && drawdownStage > 0){
+          drawdownStage = 0;
+        }
+      }
+    }
+
     if(isRebalWeek){
       // 옵션: 시장 필터
       const opts = window.STRATEGY_OPTS || {mktFilter:false,mktBoost:false,newHigh:false,streak:false,mom4w:false};
+
+      // 드로다운 모드: QQQ 분할 진입 우선 적용
+      if(opts.drawdownMode && drawdownStage > 0){
+        const targetQQQ = DD_STAGES[drawdownStage];
+        // 모든 다른 종목 청산
+        for(const item of PORT){
+          if(item.t !== 'QQQ' && portfolio[item.t] > 0){
+            cashPct += portfolio[item.t];
+            portfolio[item.t] = 0;
+          }
+        }
+        // QQQ 비중을 단계별 목표로 조정
+        const diff = targetQQQ - portfolio['QQQ'];
+        portfolio['QQQ'] = targetQQQ;
+        cashPct -= diff;
+        cashPct = Math.max(0, Math.min(1, cashPct));
+
+        // 일반 추세추종 로직 건너뛰기
+        rebalCounter++;
+        // 진행 후 다음 주로
+        // 가격 추적 + 로그만 기록
+        prevWeekPrices = {};
+        for(const item of PORT){
+          if(weekSigs[item.t]) prevWeekPrices[item.t] = weekSigs[item.t].price;
+        }
+        // 포트 가치 업데이트
+        let portChange = 0;
+        for(const item of PORT){
+          if(portfolio[item.t] > 0){
+            portChange += portfolio[item.t] * (priceChanges[item.t] || 0);
+          }
+        }
+        portValue *= (1 + portChange);
+        // QQQ 가치 업데이트
+        if(qqqStartPrice === null && weekSigs['QQQ']) qqqStartPrice = weekSigs['QQQ'].price;
+        if(qqqStartPrice && weekSigs['QQQ']) qqqValue = weekSigs['QQQ'].price / qqqStartPrice;
+        equityCurve.push({date, port: portValue, qqq: qqqValue});
+        weeklyLog.push({
+          date, portValue,
+          cashPct, activeTickers: portfolio['QQQ'] > 0 ? ['QQQ'] : [],
+          rebalanced: true, drawdownStage
+        });
+        continue; // 다음 주로
+      }
 
       if(opts.mktFilter && marketBear){
         // 시장 약세 시 전체 청산
@@ -600,7 +759,19 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
         const buys=[];
         for(const item of PORT){
           const sig=weekSigs[item.t];
-          if(sig&&sig.buySignal) buys.push({ticker:item.t,score:sig.score,watch:item.watch,sig});
+          if(!sig || !sig.buySignal) continue;
+
+          // 진입 강화: 7점 이상만
+          const minScore = opts.strictEntry ? 7 : 5;
+          if(sig.score < minScore) continue;
+
+          // 휩소 방지: 최근 2주 내 청산 종목 제외
+          if(opts.whipsaw && recentExit[item.t] > 0 && recentExit[item.t] <= 2) continue;
+
+          // 강한 추세 필터: 4주 모멘텀 양수일 때만
+          if(opts.strongTrend && sig.mom4w !== undefined && sig.mom4w <= 0) continue;
+
+          buys.push({ticker:item.t,score:sig.score,watch:item.watch,sig});
         }
         buys.sort((a,b)=>b.score-a.score);
 
@@ -645,15 +816,28 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
             if(sig.rsi>=40 && sig.rsi<55) w+=0.03;
           }
 
-          // C. 변동성 역가중 (주간 변동성 높으면 축소)
+          // C. 변동성 역가중
           if(opts.volAdj && sig.vol4w){
-            if(sig.vol4w>0.03) w-=0.05;      // 3%↑ 고변동
-            else if(sig.vol4w>0.02) w-=0.02; // 2~3%
-            else if(sig.vol4w<0.01) w+=0.02; // 1%↓ 안정
+            if(sig.vol4w>0.03) w-=0.05;
+            else if(sig.vol4w>0.02) w-=0.02;
+            else if(sig.vol4w<0.01) w+=0.02;
           }
 
-          // D. 눌림목 추가매수 (정배열 유지 + 직전주 -3%↓)
+          // D. 눌림목 추가매수
           if(opts.pullback && sig.weekChange<=-0.03 && sig.aligned) w+=0.03;
+
+          // E. 모멘텀 가중 (4주 수익률 기준)
+          if(opts.momWeight && sig.mom4w){
+            if(sig.mom4w>=0.10) w+=0.05;
+            else if(sig.mom4w>=0.05) w+=0.03;
+            else if(sig.mom4w<=-0.05) w-=0.03;
+          }
+
+          // F. 사이클 ETF 가산 (cat:'cycle' 종목)
+          if(opts.cycleBoost){
+            const portItem = PORT.find(p => p.t === b.ticker);
+            if(portItem && portItem.cat === 'cycle') w+=0.05;
+          }
 
           // cap
           w=Math.max(0.02, Math.min(0.35, w));
@@ -668,6 +852,8 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
           const diff=newPort[item.t]-portfolio[item.t];
           cashPct-=diff;
           portfolio[item.t]=newPort[item.t];
+          // 매수 종목은 recentExit 리셋
+          if(newPort[item.t] > 0) recentExit[item.t] = 0;
         }
         cashPct=Math.max(0.05,Math.min(1.0,cashPct));
       }
@@ -735,14 +921,7 @@ function simLev(base1x,portDailySignals,years,maxLevPct){
   const rows=[];
   let cum=1.0;
 
-  // 디버그: portDailySignals 내용 확인
-  console.log('=== simLev START ===');
-  console.log('portDailySignals keys:', Object.keys(portDailySignals));
-  for(const [base,signals] of Object.entries(portDailySignals)){
-    console.log(`  ${base}:`, JSON.stringify(signals));
-  }
-  console.log('years:', years);
-  console.log('maxLevPct:', maxLevPct);
+  console.log(`▶ simLev (${years.length}년, ${maxLevPct}%)`);
 
   for(const yr of years){
     const baseRow=base1x.yearlyRows.find(r=>r.year===yr);
@@ -754,25 +933,22 @@ function simLev(base1x,portDailySignals,years,maxLevPct){
     let levContrib=0,levInvested=0;
     const levDetail=[];
 
-    console.log(`yr=${yr} cashPct=${cashPct.toFixed(2)} avgCash=${baseRow.avgCash.toFixed(2)}`);
-
+    const optsForLev = window.STRATEGY_OPTS || {};
     for(const [base,lev] of Object.entries(LEV3X)){
       const ds=portDailySignals[base]?.[yr];
-      console.log(`  ${base}→${lev} yr=${yr}:`, ds?JSON.stringify(ds):'NULL');
+      if(!ds) continue;
+      if(!ds.aligned||!ds.macdOk||ds.score<5) continue;
 
-      if(!ds){
-        // 3배 데이터 없으면 주봉 신호 기반으로 대체 계산
-        const wSig=base1x.yearlyRows.find(r=>r.year===yr);
-        // 주봉에서 QQQ 등이 매수 신호였다면 해당 연도 QQQ 수익*3 추정
-        continue;
+      // 동적 3배 비중: 점수별 차등 적용
+      let baseLevPct = maxLevPct;
+      if(optsForLev.dynLev){
+        if(ds.score>=8) baseLevPct = 25;
+        else if(ds.score>=6) baseLevPct = 15;
+        else baseLevPct = 5;
       }
-      if(!ds.aligned||!ds.macdOk||ds.score<5){
-        console.log(`  → signal fail: aligned=${ds.aligned} macdOk=${ds.macdOk} score=${ds.score}`);
-        continue;
-      }
-      const avail=Math.min(maxLevPct/100, cashPct-levInvested);
-      console.log(`  → avail=${avail.toFixed(3)} r3=${ds.yearReturn.toFixed(3)}`);
-      if(avail<0.01){ console.log('  → avail too small, skip'); continue; }
+
+      const avail=Math.min(baseLevPct/100, cashPct-levInvested);
+      if(avail<0.01) continue;
 
       const r3=ds.yearReturn;
       levContrib+=avail*r3;
@@ -783,7 +959,7 @@ function simLev(base1x,portDailySignals,years,maxLevPct){
     const combined=baseRow.yrReturn+levContrib;
     cum*=(1+combined);
     const levNames=levDetail.map(l=>`${l.lev}(${(l.weight*100).toFixed(0)}%,${pct(l.ret)})`).join('·')||'없음';
-    console.log(`yr=${yr} base=${pct(baseRow.yrReturn)} levContrib=${pct(levContrib)} names=${levNames}`);
+
     rows.push({year:yr,base:baseRow.yrReturn,levContrib,levNames,combined,cum});
   }
   const total=cum-1;
@@ -806,8 +982,13 @@ const won = v => {
 };
 
 // QQQ 연간 MDD 참고값
-const QQQ_YEAR_RET = {2016:0.071,2017:0.327,2018:-0.001,2019:0.390,2020:0.486,
-  2021:0.274,2022:-0.326,2023:0.549,2024:0.257,2025:0.208};
+// QQQ 연도별 실제 수익률 (2008~2025)
+const QQQ_YEAR_RET = {
+  2008:-0.418, 2009:0.547, 2010:0.199, 2011:0.034, 2012:0.181,
+  2013:0.366, 2014:0.192, 2015:0.095, 2016:0.071, 2017:0.327,
+  2018:-0.001, 2019:0.390, 2020:0.486, 2021:0.274, 2022:-0.326,
+  2023:0.549, 2024:0.257, 2025:0.208
+};
 
 function calcQqqStats(years){
   let cum=1.0, mdd=0, neg=0;
@@ -866,9 +1047,10 @@ function renderTableLev(rows){
 // ── Equity curve chart (1억 기준, 3배 라인 포함) ──
 let _levCurve = null; // 3배 곡선 데이터 저장
 
-function drawEquity(curve, levCurve){
+function drawEquity(curve, levCurve, canvasId){
   _levCurve = levCurve || null;
-  const canvas=document.getElementById('equityCanvas');
+  const canvas=document.getElementById(canvasId || 'equityCanvas5');
+  if(!canvas) return;
   const dpr=window.devicePixelRatio||1;
   const CW=canvas.parentElement.offsetWidth||960;
   const CH=220;
@@ -1012,6 +1194,15 @@ async function run(){
   btn.disabled=true;
   document.getElementById('progWrap').style.display='block';
   document.getElementById('results').classList.add('hidden');
+
+  // Wake Lock - 화면 꺼짐 방지 (백그라운드 멈춤 예방)
+  let wakeLock = null;
+  try{
+    if('wakeLock' in navigator){
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('🔆 화면 켜짐 유지 활성화');
+    }
+  }catch(e){ console.log('Wake Lock 미지원'); }
   // 진단 패널 초기화
   window.diagLogs = [];
   document.getElementById('diagContent').innerHTML='';
@@ -1030,19 +1221,32 @@ async function run(){
     newHigh: false,
     streak: false,
     mom4w: false,
-    // 새 역방향 옵션
+    // 역방향 옵션
     rsiPenalty: document.getElementById('optRsiPenalty').checked,
     rsiBonus: document.getElementById('optRsiBonus').checked,
     volAdj: document.getElementById('optVolAdj').checked,
     pullback: document.getElementById('optPullback').checked,
+    // 진입/청산 강화
+    strictEntry: document.getElementById('optStrictEntry').checked,
+    fastExit: document.getElementById('optFastExit').checked,
+    momWeight: document.getElementById('optMomWeight').checked,
+    dynLev: document.getElementById('optDynLev').checked,
+    // 약점 보완
+    cycleBoost: document.getElementById('optCycleBoost').checked,
+    whipsaw: document.getElementById('optWhipsaw').checked,
+    strongTrend: document.getElementById('optStrongTrend').checked,
+    // 드로다운 트리거
+    drawdownMode: document.getElementById('optDrawdownMode').checked,
   };
   console.log('전략 옵션:', JSON.stringify(window.STRATEGY_OPTS));
 
   const endYr=2025;
-  // 5년: 2021~2025, 10년: 2016~2025
+  const startYr=2008; // 18년 백테스트 (금융위기 포함)
+  // 5년: 2021~2025, 10년: 2016~2025, 18년: 2008~2025
   const years5=[2021,2022,2023,2024,2025];
   const years10=[2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
-  const startDate='2016-01-01'; // 10년치 데이터 모두 로드
+  const years18=[2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
+  const startDate='2008-01-01';
   const endDate='2025-12-31';
 
   const weeklyTickers=[...PORT.map(p=>p.t), 'SPY'];
@@ -1085,8 +1289,10 @@ async function run(){
       let attempt=0, success=false;
       while(attempt<3 && !success){
         try{
-          weeklyData[t]=await fetchSeries(t,'1week',12);
-          console.log(`✓ ${t}: ${weeklyData[t].length} weeks 로드됨`);
+          const t0 = Date.now();
+          console.log(`  ${t} fetch 시작...`);
+          weeklyData[t]=await fetchSeries(t,'1week',19);
+          console.log(`✓ ${t}: ${weeklyData[t].length} weeks 로드됨 (${Date.now()-t0}ms)`);
           success=true;
         }
         catch(e){
@@ -1155,17 +1361,32 @@ async function run(){
   // 일봉 연도별 신호 (3배용)
   // 3배 신호: 주봉 데이터 재활용 (이미 로드된 데이터)
   // base ticker의 주봉 연간 수익률에 ×3×0.82 적용
+  setP('3배 신호 계산 중...');
+  console.log('🔄 3배 신호 계산 시작');
   const portDailySignals={};
   if(useLev){
     for(const [base, lev] of Object.entries(LEV3X)){
+      const t0 = Date.now();
       const wd=weeklyData[base]||[];
       if(wd.length<30){ portDailySignals[base]={}; continue; }
-      const signals={};
+
+      // 한 번만 인덱스 만들기 (yr -> 위치)
+      const yrEndIdx = {};
       for(let yr=startYr;yr<=endYr;yr++){
         const cut=`${yr}-12-31`;
-        const prev=`${yr-1}-12-31`;
-        const closes=wd.filter(d=>d.date<=cut).map(d=>d.close);
-        if(closes.length<30){ signals[yr]=null; continue; }
+        let idx = -1;
+        for(let i=0;i<wd.length;i++){
+          if(wd[i].date <= cut) idx = i; else break;
+        }
+        yrEndIdx[yr] = idx;
+      }
+
+      const signals={};
+      for(let yr=startYr;yr<=endYr;yr++){
+        const idx = yrEndIdx[yr];
+        if(idx < 0 || idx < 30){ signals[yr]=null; continue; }
+        // 슬라이스 대신 인덱스로 접근
+        const closes = wd.slice(0, idx+1).map(d=>d.close);
         const e5=rollingEMA(closes,5),e10=rollingEMA(closes,10),e20=rollingEMA(closes,20);
         const hist=rollingMACD(closes);
         const price=closes[closes.length-1];
@@ -1174,21 +1395,24 @@ async function run(){
         if(e5&&price>e5)score++;if(e5&&e10&&e5>e10)score++;
         if(e10&&e20&&e10>e20)score++;if(e20&&price>e20)score++;
         if(aligned)score++;if(hist>0)score++;if(aligned&&hist>0)score++;
-        const prevC=wd.filter(d=>d.date<=prev).map(d=>d.close);
-        const base1xReturn=prevC.length>0?(price-prevC[prevC.length-1])/prevC[prevC.length-1]:0;
-        // 3배 수익 = 1배 수익 × 3 × 변동성괴리보정
-        const yearReturn=base1xReturn*3*0.82;
+
+        const prevIdx = yrEndIdx[yr-1] || -1;
+        const base1xReturn = prevIdx >= 0 ? (price - wd[prevIdx].close)/wd[prevIdx].close : 0;
+        const decayFactor = (base==='TLT') ? 0.65 : 0.82;
+        const yearReturn=base1xReturn*3*decayFactor;
         signals[yr]={score,aligned,macdOk:hist>0,yearReturn,base1xReturn,lev};
       }
       portDailySignals[base]=signals;
-      console.log(`3x signals ${base}→${lev}:`, JSON.stringify(signals));
+      console.log(`✓ 3x ${base}→${lev}: ${Object.keys(signals).length}연도 (${Date.now()-t0}ms)`);
+      await sleep(10); // UI 양보
     }
   }
+  console.log('✓ 3배 신호 계산 완료');
 
   setP('시뮬레이션 실행 중...');
 
   // 시뮬레이션
-  // ── 5년 + 10년 동시 시뮬레이션 ──
+  // ── 5년 + 10년 + 18년 동시 시뮬레이션 ──
   setP('5년 시뮬레이션 중...');
   console.log('⏰ 5년 시뮬레이션');
   await sleep(50);
@@ -1199,8 +1423,15 @@ async function run(){
   setP('10년 시뮬레이션 중...');
   console.log('⏰ 10년 시뮬레이션');
   await sleep(50);
-  const res10 = simulate(portWeeklySignals,spySignals,rebalWeeks,startDate,endDate,years10);
+  const res10 = simulate(portWeeklySignals,spySignals,rebalWeeks,'2016-01-01',endDate,years10);
   const lev10 = simLev(res10,portDailySignals,years10,maxLevPct);
+  await sleep(50);
+
+  setP('18년 시뮬레이션 중 (금융위기 포함)...');
+  console.log('⏰ 18년 시뮬레이션');
+  await sleep(50);
+  const res18 = simulate(portWeeklySignals,spySignals,rebalWeeks,startDate,endDate,years18);
+  const lev18 = simLev(res18,portDailySignals,years18,maxLevPct);
 
   const qqq5 = calcQqqStats(years5);
   const qqq10 = calcQqqStats(years10);
@@ -1217,53 +1448,87 @@ async function run(){
 
   // 10년 결과를 lev3xSection에 렌더링
   document.getElementById('lev3xSection').classList.remove('hidden');
+  const qqq18 = calcQqqStats(years18);
   document.getElementById('levSummary').innerHTML=
     `<strong style="color:var(--cy)">10년 (2016~2025)</strong> | ` +
     `CAGR <strong style="color:var(--gn)">${pct(lev10.cagr)}</strong> | ` +
     `MDD <strong style="color:var(--rd)">${pct(res10.mdd)}</strong> | ` +
     `1억→${won(lev10.total)} | ` +
-    `QQQ ${pct(qqq10.cagr)} (MDD ${pct(qqq10.mdd)})`;
+    `QQQ ${pct(qqq10.cagr)} (MDD ${pct(qqq10.mdd)})<br>` +
+    `<strong style="color:var(--pu)">18년 (2008~2025) — 금융위기 포함</strong> | ` +
+    `CAGR <strong style="color:var(--gn)">${pct(lev18.cagr)}</strong> | ` +
+    `MDD <strong style="color:var(--rd)">${pct(res18.mdd)}</strong> | ` +
+    `1억→${won(lev18.total)} | ` +
+    `QQQ ${pct(qqq18.cagr)} (MDD ${pct(qqq18.mdd)})`;
 
   // statsLev에 10년 결과 표시
   renderStats('statsLev',{totalReturn:lev10.total,cagr:lev10.cagr,mdd:res10.mdd,neg:lev10.neg},qqq10);
   renderTableLev(lev10.rows);
 
-  // 자산 곡선 (5년 기준, 3배 포함)
-  const levCurve5=res5.equityCurve.map(c=>{
-    const yr=parseInt(c.date.substring(0,4));
-    let levMult=1.0;
-    for(const lr of lev5.rows){
-      if(lr.year<yr) levMult*=(1+lr.combined);
-      else if(lr.year===yr){
-        const wInYr=res5.equityCurve.filter(x=>x.date.startsWith(String(yr)));
-        const idxInYr=wInYr.findIndex(x=>x.date===c.date);
-        const ratio=wInYr.length>0?(idxInYr+1)/wInYr.length:0;
-        levMult*=(1+lr.combined*ratio);
-        break;
-      }
-    }
-    return{date:c.date,port:levMult,qqq:c.qqq};
-  });
-  setTimeout(()=>drawEquity(res5.equityCurve,levCurve5),100);
+  // stats18 + body18에 18년 결과 표시
+  renderStats('stats18',{totalReturn:lev18.total,cagr:lev18.cagr,mdd:res18.mdd,neg:lev18.neg},qqq18);
+  // 18년 테이블 렌더링
+  document.getElementById('body18').innerHTML=lev18.rows.map(r=>`<tr>
+    <td style="font-family:'Space Mono',monospace;color:var(--dm)">${r.year}</td>
+    <td class="${cls(r.base)}" style="font-family:'Space Mono',monospace">${pct(r.base)}</td>
+    <td style="font-size:.68rem;color:var(--or)">${r.levNames}</td>
+    <td class="${cls(r.levContrib)}" style="font-family:'Space Mono',monospace">${pct(r.levContrib)}</td>
+    <td class="${cls(r.combined)}" style="font-family:'Space Mono',monospace;font-weight:700">${pct(r.combined)}</td>
+    <td style="font-family:'Space Mono',monospace;color:var(--cy)">${pct(r.cum-1)}</td>
+  </tr>`).join('');
 
-  // 최종 요약
+  // 자산 곡선 헬퍼 함수
+  function buildLevCurve(res, lev){
+    return res.equityCurve.map(c=>{
+      const yr=parseInt(c.date.substring(0,4));
+      let levMult=1.0;
+      for(const lr of lev.rows){
+        if(lr.year<yr) levMult*=(1+lr.combined);
+        else if(lr.year===yr){
+          const wInYr=res.equityCurve.filter(x=>x.date.startsWith(String(yr)));
+          const idxInYr=wInYr.findIndex(x=>x.date===c.date);
+          const ratio=wInYr.length>0?(idxInYr+1)/wInYr.length:0;
+          levMult*=(1+lr.combined*ratio);
+          break;
+        }
+      }
+      return{date:c.date,port:levMult,qqq:c.qqq};
+    });
+  }
+
+  const levCurve5 = buildLevCurve(res5, lev5);
+  const levCurve10 = buildLevCurve(res10, lev10);
+  const levCurve18 = buildLevCurve(res18, lev18);
+
+  setTimeout(()=>{
+    drawEquity(res5.equityCurve, levCurve5, 'equityCanvas5');
+    drawEquity(res10.equityCurve, levCurve10, 'equityCanvas10');
+    drawEquity(res18.equityCurve, levCurve18, 'equityCanvas18');
+  }, 100);
+
+  // 최종 요약 (5년/10년/18년)
   document.getElementById('infoResult').innerHTML=
     `✅ <strong>5년 (2021~2025):</strong> 1억→<strong style="color:var(--cy)">${won(lev5.total)}</strong> ` +
     `CAGR <strong style="color:var(--gn)">${pct(lev5.cagr)}</strong> ` +
-    `MDD <strong style="color:var(--rd)">${pct(res5.mdd)}</strong> ` +
-    `<span style="color:var(--yl)">| QQQ ${pct(qqq5.cagr)} (MDD ${pct(qqq5.mdd)})</span><br>` +
+    `MDD <strong style="color:var(--rd)">${pct(res5.mdd)}</strong><br>` +
     `✅ <strong>10년 (2016~2025):</strong> 1억→<strong style="color:var(--cy)">${won(lev10.total)}</strong> ` +
     `CAGR <strong style="color:var(--gn)">${pct(lev10.cagr)}</strong> ` +
-    `MDD <strong style="color:var(--rd)">${pct(res10.mdd)}</strong> ` +
-    `<span style="color:var(--yl)">| QQQ ${pct(qqq10.cagr)} (MDD ${pct(qqq10.mdd)})</span>`;
+    `MDD <strong style="color:var(--rd)">${pct(res10.mdd)}</strong><br>` +
+    `✅ <strong style="color:var(--pu)">18년 (2008~2025):</strong> 1억→<strong style="color:var(--cy)">${won(lev18.total)}</strong> ` +
+    `CAGR <strong style="color:var(--gn)">${pct(lev18.cagr)}</strong> ` +
+    `MDD <strong style="color:var(--rd)">${pct(res18.mdd)}</strong> ` +
+    `<span style="color:var(--yl)">| QQQ 18년 ${pct(qqq18.cagr)} (MDD ${pct(qqq18.mdd)})</span>`;
 
   document.getElementById('results').classList.remove('hidden');
   document.getElementById('progWrap').style.display='none';
   btn.disabled=false;
+
+  // Wake Lock 해제
+  if(wakeLock){ try{ await wakeLock.release(); }catch(e){} }
 }
 
 // 옵션 체크박스 자동 재계산 (캐시 데이터 있을 때)
-const optIds = ['optRsiPenalty','optRsiBonus','optVolAdj','optPullback'];
+const optIds = ['optRsiPenalty','optRsiBonus','optVolAdj','optPullback','optStrictEntry','optFastExit','optMomWeight','optDynLev','optCycleBoost','optWhipsaw','optStrongTrend','optDrawdownMode'];
 optIds.forEach(id => {
   const el = document.getElementById(id);
   if(el) el.addEventListener('change', () => {
