@@ -135,6 +135,29 @@ canvas{width:100%;height:220px;display:block;}
       ⚠️ 드로다운 옵션 ON 시 18년 MDD -25% 수준. 신용대출 환경에서는 OFF 권장.<br>
       임계값: -25/-35/-45 (이전 -20/-30/-40에서 조정. 추세추종 자연 청산 후 진입하도록)
     </div>
+
+    <!-- 3배 휩소방지 옵션 (NEW) -->
+    <div style="margin-top:12px;padding:10px;background:rgba(0,229,204,.04);border-radius:6px;border:1px solid rgba(0,229,204,.2);">
+      <div style="font-family:'Space Mono',monospace;font-size:.55rem;color:var(--cy);letter-spacing:1px;margin-bottom:8px;">3배 일봉 휩소 방지 옵션 (선택)</div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;margin-bottom:6px;">
+        <input type="checkbox" id="optLevExitDelay" style="cursor:pointer;">
+        <span><strong style="color:var(--cy)">🛡️ 옵션 A — 2일 연속 EMA10 이탈 시 청산</strong> · 단기 노이즈 무시</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;margin-bottom:6px;">
+        <input type="checkbox" id="optLevMinHold" style="cursor:pointer;">
+        <span><strong style="color:var(--cy)">⏳ 옵션 B — 진입 후 최소 3일 보유</strong> · 1일 휩소 강제 차단</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;">
+        <input type="checkbox" id="optLevStrongFilter" style="cursor:pointer;">
+        <span><strong style="color:var(--cy)">💪 옵션 C — 3배 강한추세 필터</strong> · score≥7 + 일봉 양봉 + 종가 EMA10 위 1% 이상</span>
+      </label>
+      <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
+        🎯 거래 횟수 30~50% 감소 예상 · 실거래 수수료 부담 감소 · 단 일부 큰 수익 놓칠 수 있음
+      </div>
+    </div>
   </div>
 
 
@@ -333,13 +356,14 @@ const TD='aa87760dae7b4654a35d136302b3ea0e';
 
 // ─── 캐싱 시스템 (localStorage 7일 유효) ───
 const CACHE_KEY = 'backtest_weekly_data_v2_18yr';
+const DAILY_CACHE_KEY = 'backtest_daily_data_v1_18yr';
 const CACHE_DAYS = 7;
 
 function saveCache(data){
   try{
     const payload = {timestamp: Date.now(), data};
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
-    console.log('💾 캐시 저장 완료');
+    console.log('💾 주봉 캐시 저장 완료');
   }catch(e){
     console.log('캐시 저장 실패:', e.message);
   }
@@ -352,10 +376,10 @@ function loadCache(){
     const payload = JSON.parse(raw);
     const ageDays = (Date.now() - payload.timestamp) / (1000*60*60*24);
     if(ageDays > CACHE_DAYS){
-      console.log(`캐시 만료 (${ageDays.toFixed(1)}일)`);
+      console.log(`주봉 캐시 만료 (${ageDays.toFixed(1)}일)`);
       return null;
     }
-    console.log(`✅ 캐시 사용 (${ageDays.toFixed(1)}일 전 데이터)`);
+    console.log(`✅ 주봉 캐시 사용 (${ageDays.toFixed(1)}일 전 데이터)`);
     return payload.data;
   }catch(e){
     console.log('캐시 로드 실패:', e.message);
@@ -363,9 +387,38 @@ function loadCache(){
   }
 }
 
+function saveDailyCache(data){
+  try{
+    const payload = {timestamp: Date.now(), data};
+    localStorage.setItem(DAILY_CACHE_KEY, JSON.stringify(payload));
+    console.log('💾 일봉 캐시 저장 완료');
+  }catch(e){
+    console.log('일봉 캐시 저장 실패:', e.message);
+  }
+}
+
+function loadDailyCache(){
+  try{
+    const raw = localStorage.getItem(DAILY_CACHE_KEY);
+    if(!raw) return null;
+    const payload = JSON.parse(raw);
+    const ageDays = (Date.now() - payload.timestamp) / (1000*60*60*24);
+    if(ageDays > CACHE_DAYS){
+      console.log(`일봉 캐시 만료 (${ageDays.toFixed(1)}일)`);
+      return null;
+    }
+    console.log(`✅ 일봉 캐시 사용 (${ageDays.toFixed(1)}일 전 데이터)`);
+    return payload.data;
+  }catch(e){
+    console.log('일봉 캐시 로드 실패:', e.message);
+    return null;
+  }
+}
+
 function clearCache(){
   localStorage.removeItem(CACHE_KEY);
-  console.log('🗑️ 캐시 삭제됨');
+  localStorage.removeItem(DAILY_CACHE_KEY);
+  console.log('🗑️ 캐시 삭제됨 (주봉 + 일봉)');
 }
 
 // 전역 변수: 마지막 시뮬레이션에 사용된 신호 데이터 보관
@@ -384,7 +437,7 @@ const PORT=[
   {t:'COPX',n:'Copper',      watch:false, cat:'main'},
   // 사이클 ETF (5개) - 신호 발생 시 진입
   {t:'TLT', n:'장기채',       watch:false, cat:'cycle'},
-  {t:'DBC', n:'원자재',       watch:false, cat:'cycle'},
+  {t:'PDBC',n:'원자재 (No K-1)', watch:false, cat:'cycle'},
   {t:'EEM', n:'신흥국',       watch:false, cat:'cycle'},
   {t:'VNQ', n:'미국 리츠',    watch:false, cat:'cycle'},
   {t:'REMX',n:'희토류',       watch:false, cat:'cycle'},
@@ -425,6 +478,70 @@ async function fetchSeries(symbol,interval,years){
     if(e.name === 'AbortError') throw new Error('30초 타임아웃');
     throw e;
   }
+}
+
+// 일봉 데이터를 여러 번 나눠서 받기 (18년치 = 약 4500일)
+// Twelve Data outputsize 한계 5000이지만 안전하게 2000씩 나눔
+async function fetchDailySeries(symbol, years){
+  const totalDays = years * 252 + 30; // 영업일 기준 + 여유
+  const chunks = []; // [{date, close}, ...]
+  let endDate = new Date(); // 오늘부터 거꾸로
+  let totalNeeded = totalDays;
+
+  while(totalNeeded > 0){
+    const chunkSize = Math.min(2000, totalNeeded);
+    const endStr = endDate.toISOString().substring(0,10);
+    const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=${chunkSize}&end_date=${endStr}&apikey=${TD}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    try{
+      const r = await fetch(url, {signal: controller.signal});
+      clearTimeout(timeoutId);
+      const d = await r.json();
+      if(d.status==='error'||!d.values) {
+        // 데이터 끝, 종료
+        console.log(`  ${symbol} 데이터 끝`);
+        break;
+      }
+      const newData = d.values.slice().reverse().map(v=>({
+        date: v.datetime.substring(0,10),
+        close: parseFloat(v.close)
+      }));
+      if(newData.length === 0) break;
+      // 청크 앞에 prepend
+      chunks.unshift(...newData);
+      // 다음 청크는 이번 청크 첫 날 직전
+      const firstDate = newData[0].date;
+      const newEnd = new Date(firstDate);
+      newEnd.setDate(newEnd.getDate() - 1);
+      // 같은 날짜 반환 시 무한 루프 방지
+      if(newEnd >= endDate) break;
+      endDate = newEnd;
+      totalNeeded -= newData.length;
+
+      // API 레이트 제한 회피: 청크 간 대기
+      await sleep(8000);
+    }catch(e){
+      clearTimeout(timeoutId);
+      if(e.name === 'AbortError') {
+        console.log(`  ${symbol} 30초 타임아웃, 중단`);
+        break;
+      }
+      console.log(`  ${symbol} 에러: ${e.message}`);
+      break;
+    }
+  }
+
+  // 중복 제거 + 날짜 정렬
+  const seen = new Set();
+  const unique = chunks.filter(c => {
+    if(seen.has(c.date)) return false;
+    seen.add(c.date);
+    return true;
+  });
+  unique.sort((a,b) => a.date.localeCompare(b.date));
+  return unique;
 }
 
 // ── Indicators (rolling) ──
@@ -954,68 +1071,301 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
   return{totalReturn,cagr,mdd,neg,yearlyRows,equityCurve,qqqTotal};
 }
 
-// ── 3배 시뮬레이션 (연도별 일봉 신호 기반) ──
-function simLev(base1x,portDailySignals,years,maxLevPct){
-  const rows=[];
-  let cum=1.0;
+// ── 3배 시뮬레이션 (매주 롤링 - 진입/청산 모두 주봉) ──
+// 이전 버전은 연 1회 결정이었음. 이제 매주 결정.
+function simLev(base1xResult, portWeeklySignals, years, maxLevPct){
+  const optsForLev = window.STRATEGY_OPTS || {};
 
-  console.log(`▶ simLev (${years.length}년, ${maxLevPct}%)`);
+  // 레버리지 OFF면 1배 그대로
+  if(optsForLev.useLeverage === false){
+    const rows = base1xResult.yearlyRows.map(r => ({
+      year: r.year,
+      base: r.yrReturn,
+      levContrib: 0,
+      levNames: '(레버리지 OFF)',
+      combined: r.yrReturn,
+      cum: 0,
+    }));
+    let cum = 1;
+    rows.forEach(r => { cum *= (1+r.combined); r.cum = cum-1; });
+    const total = cum-1;
+    const cagr = Math.pow(cum, 1/years.length)-1;
+    const rets = rows.map(r => r.combined);
+    const mdd = Math.min(...rets);
+    const neg = rets.filter(r => r<0).length;
+    return {rows, total, cagr, mdd, neg, totalTrades: 0, avgHoldDays: 0};
+  }
 
-  for(const yr of years){
-    const baseRow=base1x.yearlyRows.find(r=>r.year===yr);
-    if(!baseRow){ console.log(`No baseRow for yr ${yr}`); continue; }
+  // ── 일봉 데이터 기반 시뮬레이션 ──
+  const dailyData = window.DAILY_DATA || {};
+  const startYr = years[0];
+  const endYr = years[years.length-1];
+  const startDate = `${startYr}-01-01`;
+  const endDate = `${endYr}-12-31`;
 
-    // 현금: avgCash 대신 실제 현금 비중 사용
-    // avgCash가 너무 낮을 수 있으므로 최소 20% 보장
-    const cashPct=Math.max(0.20, baseRow.avgCash);
-    let levContrib=0,levInvested=0;
-    const levDetail=[];
+  console.log(`▶ simLev 일봉 시뮬레이션 (${years.length}년, 최대 ${maxLevPct}%)`);
 
-    const optsForLev = window.STRATEGY_OPTS || {};
-    // 3배 레버리지 OFF면 1배만 사용 (levContrib = 0)
-    if(optsForLev.useLeverage === false){
-      // baseRow.yrReturn은 이미 소수점 형태 (0.07 = 7%)
-      cum *= (1 + baseRow.yrReturn);
-      rows.push({
-        year:yr, base:baseRow.yrReturn, levNames:'(레버리지 OFF)',
-        levContrib:0, combined:baseRow.yrReturn, cum:cum-1
-      });
+  // 각 base 종목별 일봉 EMA10/EMA20/MACD/score 미리 계산
+  const dailySignals = {}; // {base: [{date, price, ema5, ema10, ema20, hist, aligned, score, exitSignal}]}
+
+  for(const base of Object.keys(LEV3X)){
+    const data = (dailyData[base] || []).filter(d => d.date >= startDate && d.date <= endDate);
+    if(data.length < 30){
+      dailySignals[base] = [];
       continue;
     }
-    for(const [base,lev] of Object.entries(LEV3X)){
-      const ds=portDailySignals[base]?.[yr];
-      if(!ds) continue;
-      if(!ds.aligned||!ds.macdOk||ds.score<5) continue;
 
-      // 동적 3배 비중: 점수별 차등 적용
+    const closes = data.map(d => d.close);
+    const N = closes.length;
+    const k5 = 2/6, k10 = 2/11, k20 = 2/21, k12 = 2/13, k26 = 2/27, k9 = 2/10;
+
+    let e5 = closes.slice(0,5).reduce((a,b)=>a+b,0)/5;
+    let e10 = closes.slice(0,10).reduce((a,b)=>a+b,0)/10;
+    let e20 = closes.slice(0,20).reduce((a,b)=>a+b,0)/20;
+    let e12 = closes.slice(0,12).reduce((a,b)=>a+b,0)/12;
+    let e26 = closes.slice(0,26).reduce((a,b)=>a+b,0)/26;
+    let macdSig = 0;
+    let macdSigInit = false;
+
+    const sigs = [];
+    for(let i=0;i<N;i++){
+      if(i>=5) e5 = closes[i]*k5 + e5*(1-k5);
+      if(i>=10) e10 = closes[i]*k10 + e10*(1-k10);
+      if(i>=20) e20 = closes[i]*k20 + e20*(1-k20);
+      if(i>=12) e12 = closes[i]*k12 + e12*(1-k12);
+      if(i>=26) e26 = closes[i]*k26 + e26*(1-k26);
+
+      let hist = 0;
+      if(i>=26){
+        const macdLine = e12 - e26;
+        if(!macdSigInit){
+          if(i >= 26+8){
+            macdSig = macdLine;  // 간소화
+            macdSigInit = true;
+          }
+        } else {
+          macdSig = macdLine*k9 + macdSig*(1-k9);
+        }
+        hist = macdSigInit ? (macdLine - macdSig) : 0;
+      }
+
+      if(i < 20){
+        sigs.push(null);
+        continue;
+      }
+
+      const price = closes[i];
+      const aligned = e5 > e10 && e10 > e20 && price > e20;
+      let score = 0;
+      if(price>e5) score++;
+      if(e5>e10) score++;
+      if(e10>e20) score++;
+      if(price>e20) score++;
+      if(aligned) score++;
+      if(hist>0) score++;
+      if(aligned && hist>0) score++;
+
+      const exitSignal = price < e10; // 일봉 EMA10 이탈 시 청산
+
+      sigs.push({
+        date: data[i].date,
+        price,
+        ema5: e5, ema10: e10, ema20: e20, hist,
+        aligned, score, exitSignal,
+        buySignal: aligned && hist>0 && score >= 5,
+      });
+    }
+    dailySignals[base] = sigs.filter(s => s !== null);
+    console.log(`  ${base} 일봉 신호: ${dailySignals[base].length}일`);
+  }
+
+  // 모든 거래일 통합 (QQQ 기준 또는 가장 긴 데이터)
+  let allDates = [];
+  for(const base of Object.keys(LEV3X)){
+    if(dailySignals[base].length > allDates.length){
+      allDates = dailySignals[base].map(s => s.date);
+    }
+  }
+
+  if(allDates.length === 0){
+    console.warn('  일봉 데이터 없음');
+    return {rows:[], total:0, cagr:0, mdd:0, neg:0, totalTrades:0, avgHoldDays:0};
+  }
+
+  // base별 신호 인덱스 맵 (날짜 → 신호)
+  const sigMap = {};
+  for(const base of Object.keys(LEV3X)){
+    sigMap[base] = {};
+    for(const s of dailySignals[base]){
+      sigMap[base][s.date] = s;
+    }
+  }
+
+  // 3배 보유 상태
+  // exitStreak: 연속 EMA10 이탈 일수 (옵션 A용)
+  const holdings = {}; // {base: {weight, entryDate, entryPrice, cumReturn, daysHeld, exitStreak}}
+  const trades = [];
+  const yearlyContrib = {};
+  years.forEach(y => yearlyContrib[y] = 0);
+
+  let prevPrices = {};
+
+  for(let i = 0; i < allDates.length; i++){
+    const date = allDates[i];
+    const yr = parseInt(date.slice(0,4));
+    if(yr < startYr || yr > endYr) continue;
+
+    // 1) 보유 중 가격 변동 + 청산 체크
+    for(const [base, hold] of Object.entries(holdings)){
+      const sig = sigMap[base][date];
+      if(!sig) continue;
+
+      // 가격 변동 (일일 단위)
+      const prev = prevPrices[base];
+      if(prev && sig.price){
+        const baseRet = (sig.price - prev) / prev;
+        const lev3xRet = baseRet * 3;
+        hold.cumReturn = (1 + (hold.cumReturn || 0)) * (1 + lev3xRet) - 1;
+        yearlyContrib[yr] += hold.weight * lev3xRet;
+      }
+
+      hold.daysHeld = (hold.daysHeld || 0) + 1;
+
+      // 청산 신호 발생 여부
+      const exitTriggered = sig.exitSignal;
+
+      // 옵션 A: 2일 연속 EMA10 이탈 시 청산
+      if(optsForLev.levExitDelay){
+        if(exitTriggered) hold.exitStreak = (hold.exitStreak || 0) + 1;
+        else hold.exitStreak = 0;
+      }
+
+      // 옵션 B: 진입 후 최소 3일 보유 (3일 안 됐으면 청산 보류)
+      const minHoldOk = !optsForLev.levMinHold || hold.daysHeld >= 3;
+
+      // 청산 결정
+      let shouldExit = false;
+      if(optsForLev.levExitDelay){
+        // 옵션 A: 2일 연속 이탈
+        shouldExit = (hold.exitStreak >= 2) && minHoldOk;
+      } else {
+        // 기본: 1일 이탈로 즉시 청산
+        shouldExit = exitTriggered && minHoldOk;
+      }
+
+      if(shouldExit){
+        const days = Math.round((new Date(date) - new Date(hold.entryDate)) / 86400000);
+        trades.push({
+          base, lev: LEV3X[base],
+          entryDate: hold.entryDate, exitDate: date,
+          return: hold.cumReturn || 0,
+          days: days || 1,
+        });
+        delete holdings[base];
+      }
+    }
+
+    // 2) 신규 진입 체크
+    let totalLevWeight = Object.values(holdings).reduce((s,h)=>s+h.weight, 0);
+    const cashPct = Math.max(0.20, 1 - totalLevWeight);
+
+    for(const [base, lev] of Object.entries(LEV3X)){
+      if(holdings[base]) continue;
+      const sig = sigMap[base][date];
+      if(!sig) continue;
+
+      // 진입 조건: 일봉 buySignal (aligned + macdOk + score>=5)
+      if(!sig.buySignal) continue;
+
+      // 옵션 C: 강한추세 필터 (3배에 추가 적용)
+      if(optsForLev.levStrongFilter){
+        // score >= 7
+        if(sig.score < 7) continue;
+        // 종가가 EMA10보다 1% 이상 위
+        if(!sig.ema10 || sig.price < sig.ema10 * 1.01) continue;
+        // 추가: 일봉 양봉 (전일 대비 상승)
+        const prev = prevPrices[base];
+        if(prev && sig.price < prev) continue;
+      }
+
+      // 동적 3배 비중
       let baseLevPct = maxLevPct;
       if(optsForLev.dynLev){
-        if(ds.score>=8) baseLevPct = 25;
-        else if(ds.score>=6) baseLevPct = 15;
+        if(sig.score >= 8) baseLevPct = 25;
+        else if(sig.score >= 6) baseLevPct = 15;
         else baseLevPct = 5;
       }
 
-      const avail=Math.min(baseLevPct/100, cashPct-levInvested);
-      if(avail<0.01) continue;
+      const avail = Math.min(baseLevPct/100, cashPct - totalLevWeight);
+      if(avail < 0.01) continue;
 
-      const r3=ds.yearReturn;
-      levContrib+=avail*r3;
-      levInvested+=avail;
-      levDetail.push({lev,weight:avail,ret:r3,score:ds.score});
+      holdings[base] = {
+        weight: avail,
+        entryDate: date,
+        entryPrice: sig.price,
+        cumReturn: 0,
+        daysHeld: 0,      // 옵션 B용
+        exitStreak: 0,    // 옵션 A용
+      };
+      totalLevWeight += avail;
     }
 
-    const combined=baseRow.yrReturn+levContrib;
-    cum*=(1+combined);
-    const levNames=levDetail.map(l=>`${l.lev}(${(l.weight*100).toFixed(0)}%,${pct(l.ret)})`).join('·')||'없음';
-
-    rows.push({year:yr,base:baseRow.yrReturn,levContrib,levNames,combined,cum});
+    // 가격 업데이트
+    for(const base of Object.keys(LEV3X)){
+      const sig = sigMap[base][date];
+      if(sig?.price) prevPrices[base] = sig.price;
+    }
   }
-  const total=cum-1;
-  const cagr=Math.pow(cum,1/years.length)-1;
-  const rets=rows.map(r=>r.combined);
-  const mdd=Math.min(...rets);
-  const neg=rets.filter(r=>r<0).length;
-  return{rows,total,cagr,mdd,neg};
+
+  // 미청산 보유분 정리
+  const lastDate = allDates[allDates.length-1];
+  for(const [base, hold] of Object.entries(holdings)){
+    const days = Math.round((new Date(lastDate) - new Date(hold.entryDate)) / 86400000);
+    trades.push({
+      base, lev: LEV3X[base],
+      entryDate: hold.entryDate, exitDate: lastDate,
+      return: hold.cumReturn || 0,
+      days: days || 1,
+      open: true,
+    });
+  }
+
+  // 연도별 결과 통합
+  const rows = [];
+  let cum = 1;
+  for(const yr of years){
+    const baseRow = base1xResult.yearlyRows.find(r => r.year === yr);
+    if(!baseRow){ continue; }
+    const levContrib = yearlyContrib[yr] || 0;
+    const combined = baseRow.yrReturn + levContrib;
+    cum *= (1 + combined);
+
+    const yrTrades = trades.filter(t => {
+      const ey = parseInt(t.entryDate.slice(0,4));
+      const xy = parseInt(t.exitDate.slice(0,4));
+      return ey <= yr && yr <= xy;
+    });
+    const levNames = yrTrades.length > 0
+      ? yrTrades.map(t => `${t.lev}(${t.days}d)`).join('·')
+      : '없음';
+
+    rows.push({year:yr, base:baseRow.yrReturn, levContrib, levNames, combined, cum:cum-1});
+  }
+
+  const total = cum - 1;
+  const cagr = years.length > 0 ? Math.pow(cum, 1/years.length) - 1 : 0;
+  const rets = rows.map(r => r.combined);
+  const mdd = rets.length > 0 ? Math.min(...rets) : 0;
+  const neg = rets.filter(r => r < 0).length;
+
+  const totalTrades = trades.length;
+  const avgHoldDays = trades.length > 0
+    ? trades.reduce((s,t)=>s+t.days, 0) / trades.length
+    : 0;
+
+  console.log(`◀ simLev 완료: ${(total*100).toFixed(1)}%, 거래 ${totalTrades}회, 평균 보유 ${avgHoldDays.toFixed(1)}일`);
+
+  return {rows, total, cagr, mdd, neg, totalTrades, avgHoldDays, trades};
 }
 
 // ── Format ──
@@ -1287,6 +1637,10 @@ async function run(){
     drawdownMode: document.getElementById('optDrawdownMode').checked,
     // 3배 레버리지 사용 여부
     useLeverage: document.getElementById('optUseLeverage').checked,
+    // 3배 일봉 휩소방지 (NEW)
+    levExitDelay: document.getElementById('optLevExitDelay').checked,
+    levMinHold: document.getElementById('optLevMinHold').checked,
+    levStrongFilter: document.getElementById('optLevStrongFilter').checked,
   };
   console.log('전략 옵션:', JSON.stringify(window.STRATEGY_OPTS));
 
@@ -1369,9 +1723,48 @@ async function run(){
   // 전역 보관 (옵션 변경 시 재계산용)
   window.WEEKLY_DATA = weeklyData;
 
-  // 3배는 주봉 데이터 재활용 (추가 API 호출 없음)
-  // 주봉 신호 강할 때(6점↑) → 해당 수익률×3×0.82 적용
-  const dailyData={};
+  // ── 일봉 데이터 fetch (3배 시뮬레이션용) ──
+  // 6개 base 종목만 일봉 받음 (LEV3X 매핑된 종목)
+  const useLevForDaily = document.getElementById('optUseLeverage').checked;
+  const dailyBaseTickers = useLevForDaily ? Object.keys(LEV3X) : []; // QQQ, SMH, GDX, IBB, URA, XLF
+  let dailyData = loadDailyCache();
+  let dailyCacheValid = false;
+  if(dailyData && useLevForDaily){
+    dailyCacheValid = dailyBaseTickers.every(t => {
+      const arr = dailyData[t];
+      if(!arr || arr.length < 1000) return false; // 최소 1000일 (약 4년)
+      const first = arr[0];
+      if(!first || !first.date || typeof first.close !== 'number') return false;
+      return true;
+    });
+    if(dailyCacheValid){
+      console.log(`✅ 일봉 캐시 검증 통과`);
+      dailyBaseTickers.forEach(t => console.log(`  ${t}: ${dailyData[t].length}일`));
+    } else {
+      console.log('⚠️ 일봉 캐시 손상 또는 부족, 새로 로드');
+      dailyData = null;
+    }
+  }
+
+  if(useLevForDaily && !dailyCacheValid){
+    setP('🐢 일봉 데이터 로딩 중 (시간 걸림, 6종목 × 다수 청크)...');
+    dailyData = {};
+    for(const t of dailyBaseTickers){
+      const t0 = Date.now();
+      setP(`📊 ${t} 일봉 로딩 (18년치 청크 단위)...`);
+      try{
+        dailyData[t] = await fetchDailySeries(t, 18);
+        console.log(`✓ ${t} 일봉: ${dailyData[t].length}일 (${Date.now()-t0}ms)`);
+      }catch(e){
+        console.log(`✗ ${t} 일봉 에러: ${e.message}`);
+        dailyData[t] = [];
+      }
+    }
+    saveDailyCache(dailyData);
+  } else if(!useLevForDaily){
+    dailyData = {}; // 빈
+  }
+  window.DAILY_DATA = dailyData;
 
   setP('주봉 신호 계산 중 (매주 롤링)...');
   console.log('🔄 신호 계산 시작');
@@ -1463,25 +1856,26 @@ async function run(){
 
   // 시뮬레이션
   // ── 5년 + 10년 + 18년 동시 시뮬레이션 ──
+  // 3배 시뮬레이션은 매주 롤링 (진입/청산 모두 주봉) - 1배 결과의 equityCurve 활용
   setP('5년 시뮬레이션 중...');
   console.log('⏰ 5년 시뮬레이션');
   await sleep(50);
   const res5 = simulate(portWeeklySignals,spySignals,rebalWeeks,'2021-01-01',endDate,years5);
-  const lev5 = simLev(res5,portDailySignals,years5,maxLevPct);
+  const lev5 = simLev(res5,portWeeklySignals,years5,maxLevPct);
   await sleep(50);
 
   setP('10년 시뮬레이션 중...');
   console.log('⏰ 10년 시뮬레이션');
   await sleep(50);
   const res10 = simulate(portWeeklySignals,spySignals,rebalWeeks,'2016-01-01',endDate,years10);
-  const lev10 = simLev(res10,portDailySignals,years10,maxLevPct);
+  const lev10 = simLev(res10,portWeeklySignals,years10,maxLevPct);
   await sleep(50);
 
   setP('18년 시뮬레이션 중 (금융위기 포함)...');
   console.log('⏰ 18년 시뮬레이션');
   await sleep(50);
   const res18 = simulate(portWeeklySignals,spySignals,rebalWeeks,startDate,endDate,years18);
-  const lev18 = simLev(res18,portDailySignals,years18,maxLevPct);
+  const lev18 = simLev(res18,portWeeklySignals,years18,maxLevPct);
 
   const qqq5 = calcQqqStats(years5);
   const qqq10 = calcQqqStats(years10);
@@ -1509,7 +1903,11 @@ async function run(){
     `CAGR <strong style="color:var(--gn)">${pct(lev18.cagr)}</strong> | ` +
     `MDD <strong style="color:var(--rd)">${pct(res18.mdd)}</strong> | ` +
     `1억→${won(lev18.total)} | ` +
-    `QQQ ${pct(qqq18.cagr)} (MDD ${pct(qqq18.mdd)})`;
+    `QQQ ${pct(qqq18.cagr)} (MDD ${pct(qqq18.mdd)})<br>` +
+    `<span style="color:var(--yl);font-size:.7rem">📊 3배 거래 통계 (18년):</span> ` +
+    `<span style="color:var(--tx);font-size:.7rem">총 ${lev18.totalTrades || 0}회 진입/청산 · ` +
+    `평균 보유 ${(lev18.avgHoldDays || 0).toFixed(0)}일 · ` +
+    `매일 결정 (일봉 EMA10 기준 진입+청산)</span>`;
 
   // statsLev에 10년 결과 표시
   renderStats('statsLev',{totalReturn:lev10.total,cagr:lev10.cagr,mdd:res10.mdd,neg:lev10.neg},qqq10);
@@ -1641,6 +2039,17 @@ const SWEEP_COMBOS = [
     rsiPenalty:false, volAdj:false, whipsaw:false, strongTrend:false, leverage:false},
   {name:'아무 옵션 없음 + 레버리지',
     rsiPenalty:false, volAdj:false, whipsaw:false, strongTrend:false, leverage:true},
+
+  // 3배 휩소방지 옵션 비교 (NEW)
+  {name:'─── 옵션1 + 레버리지 + 휩소방지 옵션 ───', separator:true},
+  {name:'옵션1+레버리지 + 옵션A (2일연속 이탈청산)',
+    leverage:true, levExitDelay:true},
+  {name:'옵션1+레버리지 + 옵션B (최소 3일 보유)',
+    leverage:true, levMinHold:true},
+  {name:'옵션1+레버리지 + 옵션C (강한추세 필터)',
+    leverage:true, levStrongFilter:true},
+  {name:'옵션1+레버리지 + A+B+C 모두',
+    leverage:true, levExitDelay:true, levMinHold:true, levStrongFilter:true},
 ];
 
 let SWEEP_RESULTS = [];
@@ -1651,6 +2060,8 @@ function setSweepOpts(combo){
   const defaults = {
     rsiPenalty: true, volAdj: true, whipsaw: true, strongTrend: true,
     leverage: true, drawdown: false,
+    // 휩소방지는 기본 OFF
+    levExitDelay: false, levMinHold: false, levStrongFilter: false,
   };
   // combo가 명시한 값으로 덮어씀
   const c = {...defaults, ...combo};
@@ -1668,6 +2079,10 @@ function setSweepOpts(combo){
 
   document.getElementById('optDrawdownMode').checked = c.drawdown;
   document.getElementById('optUseLeverage').checked = c.leverage;
+  // 휩소방지 옵션 적용
+  document.getElementById('optLevExitDelay').checked = c.levExitDelay;
+  document.getElementById('optLevMinHold').checked = c.levMinHold;
+  document.getElementById('optLevStrongFilter').checked = c.levStrongFilter;
 }
 
 async function runSingleBacktest(){
@@ -1692,13 +2107,16 @@ async function runSweep(){
     alert('❌ 캐시 데이터가 없습니다.\n먼저 "▶ 백테스팅 실행"을 1회 클릭해주세요.');
     return;
   }
-  if(!confirm(`옵션 비교를 시작합니다.\n\n• 8가지 조합\n  - 옵션1 풀세트 4종 (DD/Lev 변형)\n  - 옵션 일부 OFF로 1배 수익 검증 4종\n• 예상 시간: 2~4분\n• 화면 꺼지지 않게 유지하세요\n\n계속할까요?`)){
+  if(!confirm(`옵션 비교를 시작합니다.\n\n• 12가지 조합\n  - 옵션1 풀세트 4종 (DD/Lev 변형)\n  - 일부 옵션 OFF로 1배 검증 4종\n  - 휩소방지 옵션 4종 (옵션 A/B/C/모두) ⭐ NEW\n• 예상 시간: 3~6분\n• 화면 꺼지지 않게 유지하세요\n\n계속할까요?`)){
     return;
   }
 
   // 현재 사용자 설정 백업
   const userSavedDD = document.getElementById('optDrawdownMode').checked;
   const userSavedLev = document.getElementById('optUseLeverage').checked;
+  const userSavedExitDelay = document.getElementById('optLevExitDelay').checked;
+  const userSavedMinHold = document.getElementById('optLevMinHold').checked;
+  const userSavedStrongFilter = document.getElementById('optLevStrongFilter').checked;
 
   SWEEP_RUNNING = true;
   SWEEP_RESULTS = [];
@@ -1771,6 +2189,9 @@ async function runSweep(){
   // 종료 처리: 사용자 원래 설정으로 복원
   document.getElementById('optDrawdownMode').checked = userSavedDD;
   document.getElementById('optUseLeverage').checked = userSavedLev;
+  document.getElementById('optLevExitDelay').checked = userSavedExitDelay;
+  document.getElementById('optLevMinHold').checked = userSavedMinHold;
+  document.getElementById('optLevStrongFilter').checked = userSavedStrongFilter;
 
   if(wakeLock){ try{ await wakeLock.release(); }catch(e){} }
   SWEEP_RUNNING = false;
