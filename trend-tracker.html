@@ -1208,6 +1208,244 @@ function buildPortfolio() {
 
   document.getElementById('portfolioContent').innerHTML=html;
   document.getElementById('portfolioSection').style.display='block';
+
+  // ⭐ 포트 변화 감지 - 지난주 대비 (1배 ETF)
+  detectWeeklyPortChange(allocs, lev3xRecs);
+}
+
+// 1배 ETF 주간 포트 변화 감지
+function detectWeeklyPortChange(allocs, lev3xRecs){
+  // 오늘의 포트 스냅샷 만들기
+  const today = new Date().toISOString().substring(0,10);
+  const todaySnapshot = {
+    date: today,
+    timestamp: Date.now(),
+    allocs: {}, // {ticker: {weight, score, signal}}
+    lev3x: {},  // {lev: {recWeight, base}}
+  };
+  
+  allocs.forEach(item => {
+    todaySnapshot.allocs[item.ticker] = {
+      weight: item.weight,
+      score: item.data.score,
+      signal: item.data.signal,
+      price: item.data.price,
+    };
+  });
+  
+  lev3xRecs.forEach(r => {
+    todaySnapshot.lev3x[r.lev] = {
+      base: r.base,
+      recWeight: r.recWeight,
+      score: r.score,
+    };
+  });
+  
+  // 지난주 스냅샷 불러오기
+  let lastWeekSnapshot = null;
+  try {
+    const raw = localStorage.getItem('weekly_port_snapshot_v1');
+    if(raw){
+      const data = JSON.parse(raw);
+      // 4일+ 지났을 때만 비교 (같은 주 중복 방지)
+      const daysDiff = (Date.now() - data.timestamp) / (24*60*60*1000);
+      if(daysDiff >= 3){
+        lastWeekSnapshot = data;
+      }
+    }
+  } catch(e){ console.warn('주간 스냅샷 로딩 실패', e); }
+  
+  // 변화 분석
+  const changes = analyzeWeeklyChanges(lastWeekSnapshot, todaySnapshot);
+  
+  // 변화 박스 표시 (포트폴리오 섹션 상단에)
+  let changeHtml = '';
+  if(!lastWeekSnapshot){
+    changeHtml = `<div style="padding:10px;background:rgba(255,193,7,.05);border-radius:6px;margin-bottom:12px;font-size:.7rem;color:var(--yl);">
+      ℹ️ 첫 풀스캔이거나 지난주 데이터 없음 - 다음주부터 변화 비교 작동
+    </div>`;
+  } else if(changes.total === 0){
+    changeHtml = `<div style="padding:10px;background:rgba(76,175,80,.05);border-radius:6px;margin-bottom:12px;font-size:.7rem;color:var(--gn);">
+      ✓ 지난주 대비 포트 변화 없음 (모든 종목/비중 동일)
+      <span style="color:var(--dm);font-size:.6rem;margin-left:6px">(${lastWeekSnapshot.date} 기준)</span>
+    </div>`;
+  } else {
+    changeHtml = `<div style="padding:14px;background:linear-gradient(135deg,rgba(255,193,7,.12),rgba(0,229,204,.08));border:2px solid var(--yl);border-radius:8px;margin-bottom:14px;">
+      <div style="font-weight:700;color:var(--yl);margin-bottom:10px;font-size:.85rem;">
+        🔔 지난주 (${lastWeekSnapshot.date}) 대비 포트 변화 ${changes.total}건
+      </div>`;
+    
+    // 신규 진입
+    changes.added.forEach(c => {
+      const channel = getChannelInfo(c.ticker);
+      changeHtml += `<div style="padding:8px;background:rgba(76,175,80,.1);border-left:3px solid var(--gn);border-radius:4px;margin-bottom:5px;">
+        <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--gn);font-size:.85rem;">
+          ➕ ${c.ticker} 신규 진입 ${channel}
+        </div>
+        <div style="font-size:.7rem;color:var(--tx);margin-top:3px;line-height:1.5;">
+          비중 <strong>${c.weight}%</strong> (${c.weight*100}만 매수) · score ${c.score}/9
+        </div>
+      </div>`;
+    });
+    
+    // 청산
+    changes.removed.forEach(c => {
+      const channel = getChannelInfo(c.ticker);
+      changeHtml += `<div style="padding:8px;background:rgba(255,64,96,.1);border-left:3px solid var(--rd);border-radius:4px;margin-bottom:5px;">
+        <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--rd);font-size:.85rem;">
+          ➖ ${c.ticker} 청산 ${channel}
+        </div>
+        <div style="font-size:.7rem;color:var(--tx);margin-top:3px;line-height:1.5;">
+          지난주 ${c.prevWeight}% → 0% (${c.prevWeight*100}만 매도)
+        </div>
+      </div>`;
+    });
+    
+    // 비중 변화
+    changes.weightChanged.forEach(c => {
+      const diff = c.curr - c.prev;
+      const arrow = diff > 0 ? '⬆️' : '⬇️';
+      const color = diff > 0 ? 'var(--cy)' : 'var(--yl)';
+      const action = diff > 0 ? '추가 매수' : '비중 축소';
+      const amount = Math.abs(diff) * 100;
+      const channel = getChannelInfo(c.ticker);
+      changeHtml += `<div style="padding:8px;background:rgba(0,229,204,.05);border-left:3px solid ${color};border-radius:4px;margin-bottom:5px;">
+        <div style="font-family:'DM Mono',monospace;font-weight:700;color:${color};font-size:.85rem;">
+          ${arrow} ${c.ticker} 비중 변경 ${channel}
+        </div>
+        <div style="font-size:.7rem;color:var(--tx);margin-top:3px;line-height:1.5;">
+          ${c.prev}% → <strong>${c.curr}%</strong> (${diff>0?'+':''}${diff}%p) · ${action} ${amount}만
+        </div>
+      </div>`;
+    });
+    
+    // 3배 변화
+    changes.lev3xAdded.forEach(c => {
+      changeHtml += `<div style="padding:8px;background:rgba(181,123,238,.1);border-left:3px solid var(--pu);border-radius:4px;margin-bottom:5px;">
+        <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--pu);font-size:.85rem;">
+          ⚡ ${c.lev} 3배 신규 진입
+        </div>
+        <div style="font-size:.7rem;color:var(--tx);margin-top:3px;line-height:1.5;">
+          비중 <strong>${c.weight}%</strong> (${c.weight*100}만) · ${c.base} STRONG 신호
+        </div>
+      </div>`;
+    });
+    
+    changes.lev3xRemoved.forEach(c => {
+      changeHtml += `<div style="padding:8px;background:rgba(255,64,96,.08);border-left:3px solid var(--rd);border-radius:4px;margin-bottom:5px;">
+        <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--rd);font-size:.85rem;">
+          ⚡ ${c.lev} 3배 청산
+        </div>
+        <div style="font-size:.7rem;color:var(--tx);margin-top:3px;line-height:1.5;">
+          지난주 ${c.prevWeight}% → 0% · 일봉 모니터에서 청산 신호 확인
+        </div>
+      </div>`;
+    });
+    
+    changeHtml += `<div style="margin-top:8px;padding:6px 8px;background:rgba(0,0,0,0.3);border-radius:4px;font-size:.6rem;color:var(--dm);line-height:1.5;">
+      💡 월요일 시초가에 위 변화 실행 (매도 먼저, 매수 나중)<br>
+      💡 비중 변화는 작은 차이는 무시 (실거래 비용 고려, ±2%p 이상만)
+    </div></div>`;
+  }
+  
+  // 포트폴리오 섹션 상단에 삽입
+  const contentEl = document.getElementById('portfolioContent');
+  contentEl.innerHTML = changeHtml + contentEl.innerHTML;
+  
+  // 오늘 스냅샷 저장 (다음주 비교용)
+  try {
+    localStorage.setItem('weekly_port_snapshot_v1', JSON.stringify(todaySnapshot));
+  } catch(e){ console.warn('주간 스냅샷 저장 실패', e); }
+}
+
+// 변화 분석 함수
+function analyzeWeeklyChanges(prev, curr){
+  const result = {
+    added: [],         // 신규 진입
+    removed: [],       // 청산
+    weightChanged: [], // 비중 변화 (±2%p 이상)
+    lev3xAdded: [],
+    lev3xRemoved: [],
+    total: 0,
+  };
+  
+  if(!prev) return result;
+  
+  const prevTickers = new Set(Object.keys(prev.allocs || {}));
+  const currTickers = new Set(Object.keys(curr.allocs || {}));
+  
+  // 신규 진입
+  for(const t of currTickers){
+    if(!prevTickers.has(t)){
+      result.added.push({
+        ticker: t,
+        weight: curr.allocs[t].weight,
+        score: curr.allocs[t].score,
+      });
+    }
+  }
+  
+  // 청산
+  for(const t of prevTickers){
+    if(!currTickers.has(t)){
+      result.removed.push({
+        ticker: t,
+        prevWeight: prev.allocs[t].weight,
+      });
+    }
+  }
+  
+  // 비중 변화 (±2%p 이상만 의미 있는 변화로 표시)
+  for(const t of currTickers){
+    if(prevTickers.has(t)){
+      const p = prev.allocs[t].weight;
+      const c = curr.allocs[t].weight;
+      if(Math.abs(c - p) >= 2){
+        result.weightChanged.push({
+          ticker: t,
+          prev: p,
+          curr: c,
+        });
+      }
+    }
+  }
+  
+  // 3배 변화
+  const prevLev = new Set(Object.keys(prev.lev3x || {}));
+  const currLev = new Set(Object.keys(curr.lev3x || {}));
+  
+  for(const t of currLev){
+    if(!prevLev.has(t)){
+      result.lev3xAdded.push({
+        lev: t,
+        base: curr.lev3x[t].base,
+        weight: curr.lev3x[t].recWeight,
+      });
+    }
+  }
+  
+  for(const t of prevLev){
+    if(!currLev.has(t)){
+      result.lev3xRemoved.push({
+        lev: t,
+        prevWeight: prev.lev3x[t].recWeight,
+      });
+    }
+  }
+  
+  result.total = result.added.length + result.removed.length + 
+                 result.weightChanged.length + result.lev3xAdded.length + result.lev3xRemoved.length;
+  return result;
+}
+
+// 채널 정보 (한국 ISA / 미국 직투)
+function getChannelInfo(ticker){
+  const allItems = [...HOLD, ...CYCLE, ...WATCH];
+  const item = allItems.find(x => x.t === ticker);
+  if(item?.kr){
+    return `<span style="background:rgba(0,229,204,.15);color:var(--cy);padding:1px 5px;border-radius:3px;font-size:.55rem;margin-left:6px">🇰🇷 ${item.kr.code}</span>`;
+  }
+  return `<span style="background:rgba(255,140,66,.15);color:var(--or);padding:1px 5px;border-radius:3px;font-size:.55rem;margin-left:6px">🇺🇸 직투</span>`;
 }
 
 // ── 드로다운 모드 전용 포트폴리오 화면 ──
@@ -1330,67 +1568,239 @@ async function scanDaily(){
   btn.disabled = true;
   btn.textContent = '⏳ 일봉 데이터 로딩 중...';
 
-  let html = '';
-  let holdCount = 0, exitCount = 0;
+  // 어제 스캔 결과 불러오기 (변화 감지용)
+  let yesterdaySnapshot = {};
+  try {
+    const raw = localStorage.getItem('daily_snapshot_v1');
+    if(raw){
+      const data = JSON.parse(raw);
+      // 어제 또는 그 이전 데이터만 사용 (오늘 거 무시)
+      const today = new Date().toISOString().substring(0,10);
+      if(data.date && data.date !== today){
+        yesterdaySnapshot = data.snapshot || {};
+      }
+    }
+  } catch(e){ console.warn('snapshot 로딩 실패', e); }
 
-  for(const t of tickers){
+  // ⭐ 전체 6종 모니터 - 보유 안 한 종목도 체크 (진입 신호 감지)
+  const allTickers = LEV3_TICKERS;
+  const allResults = {};
+  
+  for(const t of allTickers){
     try{
       const missesBefore = CACHE_MISSES;
-      // 일봉 30일치 (EMA10 + 여유) - 캐시 적용
       const closes = await getTimeSeries(t, '1day', 30);
       const price = closes[closes.length-1];
       const prevPrice = closes[closes.length-2];
       const change = ((price-prevPrice)/prevPrice)*100;
 
-      // 일봉 EMA10 계산
       const k = 2/11;
       let ema10 = closes.slice(0,10).reduce((a,b)=>a+b,0)/10;
       for(let i=10;i<closes.length;i++) ema10 = closes[i]*k + ema10*(1-k);
 
       const above = price > ema10;
-      const gap = ((price - ema10) / ema10 * 100).toFixed(2);
+      const gap = ((price - ema10) / ema10 * 100);
 
-      if(above) holdCount++;
-      else exitCount++;
+      // 신호 등급 결정
+      let signal = '';
+      if(above && gap > 3) signal = 'STRONG_BUY';      // EMA10 위 +3%
+      else if(above) signal = 'HOLD';                   // EMA10 위
+      else if(gap > -2) signal = 'WATCH';               // EMA10 -2% 이내 (위험구간)
+      else signal = 'EXIT';                             // EMA10 -2% 이하
 
-      const status = above
-        ? '<span style="color:var(--gn);font-weight:600">✅ 보유 유지</span>'
-        : '<span style="color:var(--rd);font-weight:700">🚨 청산! 다음날 시초가 매도</span>';
+      allResults[t] = {
+        price, prevPrice, change, ema10, gap, above, signal,
+        held: tickers.includes(t),
+      };
 
-      const borderColor = above ? 'var(--gn)' : 'var(--rd)';
-
-      html += `<div style="padding:10px;background:var(--s2);border-left:3px solid ${borderColor};border-radius:6px;margin-bottom:6px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <span style="font-family:'DM Mono',monospace;color:var(--wh);font-weight:700;font-size:.95rem">${t}</span>
-            <span style="font-family:'DM Mono',monospace;color:var(--tx);font-size:.7rem;margin-left:8px">$${price.toFixed(2)}</span>
-            <span style="font-family:'DM Mono',monospace;color:${change>=0?'var(--gn)':'var(--rd)'};font-size:.65rem;margin-left:6px">${change>=0?'+':''}${change.toFixed(2)}%</span>
-          </div>
-          ${status}
-        </div>
-        <div style="font-size:.62rem;color:var(--dm);margin-top:4px;font-family:'DM Mono',monospace">
-          EMA10: $${ema10.toFixed(2)} · 차이 ${gap}%
-        </div>
-      </div>`;
-
-      // API rate limit 대기 (캐시 미스 시에만)
       if(CACHE_MISSES > missesBefore) await new Promise(r => setTimeout(r, 1500));
     }catch(e){
-      html += `<div style="padding:8px;color:var(--dm);font-size:.7rem">${t}: 오류 ${e.message}</div>`;
+      allResults[t] = {error: e.message};
     }
+  }
+
+  // 신호 변화 감지
+  const changes = []; // {t, prev, curr, type}
+  for(const t of allTickers){
+    const today = allResults[t];
+    const yesterday = yesterdaySnapshot[t];
+    if(today.error || !yesterday) continue;
+    
+    if(yesterday.signal !== today.signal){
+      changes.push({
+        t,
+        prev: yesterday.signal,
+        curr: today.signal,
+        prevGap: yesterday.gap,
+        currGap: today.gap,
+      });
+    }
+  }
+
+  // 변화 알림 박스 (있을 때만)
+  let changesHtml = '';
+  if(changes.length > 0){
+    changesHtml = `<div style="padding:14px;background:linear-gradient(135deg,rgba(255,193,7,.15),rgba(255,64,96,.1));border:2px solid var(--yl);border-radius:8px;margin-bottom:12px;">
+      <div style="font-weight:700;color:var(--yl);margin-bottom:8px;font-size:.85rem;">
+        🔔 어제 대비 신호 변화 ${changes.length}건
+      </div>`;
+    
+    for(const c of changes){
+      const arrow = getSignalEmoji(c.prev) + ' → ' + getSignalEmoji(c.curr);
+      const action = getActionMsg(c.prev, c.curr);
+      changesHtml += `<div style="padding:8px;background:rgba(0,0,0,0.3);border-radius:6px;margin-bottom:4px;">
+        <div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--wh);font-size:.85rem;">
+          ${c.t}: ${arrow}
+        </div>
+        <div style="font-size:.7rem;color:var(--tx);margin-top:4px;line-height:1.5;">
+          ${action}<br>
+          <span style="color:var(--dm);font-size:.62rem;font-family:'DM Mono',monospace;">
+            EMA10 차이: ${c.prevGap.toFixed(1)}% → ${c.currGap.toFixed(1)}%
+          </span>
+        </div>
+      </div>`;
+    }
+    
+    changesHtml += `</div>`;
+  } else if(Object.keys(yesterdaySnapshot).length > 0){
+    changesHtml = `<div style="padding:8px;background:rgba(76,175,80,.05);border-radius:6px;margin-bottom:8px;font-size:.7rem;color:var(--gn);">
+      ✓ 어제 대비 신호 변화 없음 (모두 동일 상태 유지)
+    </div>`;
+  } else {
+    changesHtml = `<div style="padding:8px;background:rgba(255,193,7,.05);border-radius:6px;margin-bottom:8px;font-size:.7rem;color:var(--yl);">
+      ℹ️ 첫 스캔 또는 어제 데이터 없음 - 내일부터 변화 감지 작동
+    </div>`;
+  }
+
+  // 보유 종목 결과 (기존 표시)
+  let html = '';
+  let holdCount = 0, exitCount = 0;
+
+  for(const t of allTickers){
+    const r = allResults[t];
+    if(r.error){
+      html += `<div style="padding:8px;color:var(--dm);font-size:.7rem">${t}: 오류 ${r.error}</div>`;
+      continue;
+    }
+    
+    if(r.held){
+      if(r.above) holdCount++;
+      else exitCount++;
+    }
+
+    let status = '';
+    let borderColor = 'var(--dm)';
+    if(r.held){
+      if(r.above){
+        status = '<span style="color:var(--gn);font-weight:600">✅ 보유 유지</span>';
+        borderColor = 'var(--gn)';
+      } else {
+        status = '<span style="color:var(--rd);font-weight:700">🚨 청산! 다음날 시초가 매도</span>';
+        borderColor = 'var(--rd)';
+      }
+    } else {
+      // 보유 안 함 - 진입 신호 표시
+      if(r.signal === 'STRONG_BUY'){
+        status = '<span style="color:var(--cy);font-weight:700">⭐ 강한 진입 신호</span>';
+        borderColor = 'var(--cy)';
+      } else if(r.signal === 'HOLD'){
+        status = '<span style="color:var(--gn);font-size:.7rem">📈 추세 진행 중</span>';
+      } else {
+        status = '<span style="color:var(--dm);font-size:.7rem">⏸ 추세 없음</span>';
+      }
+    }
+
+    const heldBadge = r.held 
+      ? '<span style="background:var(--rd);color:#fff;padding:1px 6px;border-radius:3px;font-size:.55rem;margin-right:4px">보유</span>'
+      : '<span style="background:var(--dm);color:#fff;padding:1px 6px;border-radius:3px;font-size:.55rem;margin-right:4px">미보유</span>';
+
+    html += `<div style="padding:10px;background:var(--s2);border-left:3px solid ${borderColor};border-radius:6px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          ${heldBadge}
+          <span style="font-family:'DM Mono',monospace;color:var(--wh);font-weight:700;font-size:.95rem">${t}</span>
+          <span style="font-family:'DM Mono',monospace;color:var(--tx);font-size:.7rem;margin-left:8px">$${r.price.toFixed(2)}</span>
+          <span style="font-family:'DM Mono',monospace;color:${r.change>=0?'var(--gn)':'var(--rd)'};font-size:.65rem;margin-left:6px">${r.change>=0?'+':''}${r.change.toFixed(2)}%</span>
+        </div>
+        ${status}
+      </div>
+      <div style="font-size:.62rem;color:var(--dm);margin-top:4px;font-family:'DM Mono',monospace">
+        EMA10: $${r.ema10.toFixed(2)} · 차이 ${r.gap.toFixed(2)}%
+      </div>
+    </div>`;
   }
 
   // 요약
   const summaryHtml = `<div style="padding:10px;background:rgba(0,229,204,.05);border-radius:6px;margin-bottom:8px;font-size:.7rem">
-    <strong style="color:var(--cy)">체크 완료:</strong>
+    <strong style="color:var(--cy)">체크 완료 (보유):</strong>
     ✅ 보유 ${holdCount}개 ·
     ${exitCount > 0 ? `<strong style="color:var(--rd)">🚨 청산 ${exitCount}개</strong>` : '청산 0개'}
     <div style="font-size:.6rem;color:var(--dm);margin-top:3px">${new Date().toLocaleString('ko-KR')}</div>
   </div>`;
 
-  resultsEl.innerHTML = summaryHtml + html;
+  resultsEl.innerHTML = changesHtml + summaryHtml + html;
+  
+  // 오늘 결과를 localStorage에 저장 (내일 비교용)
+  try {
+    const today = new Date().toISOString().substring(0,10);
+    const snapshot = {};
+    for(const t of allTickers){
+      const r = allResults[t];
+      if(!r.error){
+        snapshot[t] = {
+          signal: r.signal,
+          price: r.price,
+          ema10: r.ema10,
+          gap: r.gap,
+          above: r.above,
+        };
+      }
+    }
+    localStorage.setItem('daily_snapshot_v1', JSON.stringify({date: today, snapshot}));
+  } catch(e){ console.warn('snapshot 저장 실패', e); }
+  
   btn.disabled = false;
   btn.textContent = '📊 일봉 EMA10 체크 (매일)';
+}
+
+// 신호 이모지
+function getSignalEmoji(sig){
+  const map = {
+    'STRONG_BUY': '⭐ 강한매수',
+    'HOLD': '📈 추세진행',
+    'WATCH': '⚠️ 위험구간',
+    'EXIT': '🚨 청산',
+  };
+  return map[sig] || sig;
+}
+
+// 변화에 따른 액션 메시지
+function getActionMsg(prev, curr){
+  // 진입 신호
+  if(curr === 'STRONG_BUY' && prev !== 'STRONG_BUY' && prev !== 'HOLD'){
+    return '<strong style="color:var(--cy)">🎯 신규 진입 후보!</strong> 다음날 시초가 매수 검토';
+  }
+  if(curr === 'HOLD' && (prev === 'WATCH' || prev === 'EXIT')){
+    return '<strong style="color:var(--gn)">📈 추세 회복</strong> EMA10 위로 복귀';
+  }
+  // 청산 경고
+  if(curr === 'EXIT'){
+    return '<strong style="color:var(--rd)">🚨 청산 신호!</strong> 보유 중이면 다음날 시초가 매도';
+  }
+  if(curr === 'WATCH' && prev === 'HOLD'){
+    return '<strong style="color:var(--yl)">⚠️ 추세 약화</strong> EMA10 근접 - 청산 가능성';
+  }
+  if(curr === 'WATCH' && prev === 'STRONG_BUY'){
+    return '<strong style="color:var(--yl)">⚠️ 강세 약화</strong> 변동성 증가 주의';
+  }
+  // 강도 변화
+  if(curr === 'STRONG_BUY' && prev === 'HOLD'){
+    return '<strong style="color:var(--cy)">🚀 추세 강화</strong> EMA10 +3% 돌파 - 비중 확대 검토';
+  }
+  if(curr === 'HOLD' && prev === 'STRONG_BUY'){
+    return '<span style="color:var(--yl)">📊 강세 둔화</strong> 정상 추세 유지';
+  }
+  return `${prev} → ${curr}`;
 }
 
 // 페이지 로드 시 보유 종목 복원
