@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한국 ETF API Fetch 테스트 v2</title>
+<style>
+  body {
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: #0a0e1a;
+    color: #e8edf3;
+    padding: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { color: #00e5cc; }
+  h2 { color: #ffc107; margin-top: 30px; font-size: 16px; }
+  .card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px 0;
+    border: 1px solid rgba(0,229,204,0.2);
+  }
+  .btn {
+    background: #00e5cc;
+    color: #0a0e1a;
+    border: 0;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    margin: 4px;
+    font-size: 13px;
+  }
+  .btn:hover { background: #00b8a3; }
+  .btn-yahoo { background: #ffc107; }
+  .btn-proxy { background: #ff6b6b; color: #fff; }
+  .btn-clear { background: #5a6478; color: #fff; }
+  .log {
+    background: #000;
+    color: #0f0;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    margin-top: 12px;
+  }
+  .ok { color: #00e5cc; }
+  .err { color: #ff4060; }
+  .warn { color: #ffc107; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 8px;
+    text-align: right;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  th { background: rgba(0,229,204,0.1); color: #00e5cc; }
+  td:first-child, th:first-child { text-align: left; }
+</style>
+</head>
+<body>
+
+<h1>🇰🇷 한국 ETF API Fetch 테스트 v2</h1>
+<p style="color:#ffc107;">⚠️ v1에서 공공데이터 API CORS 차단 확정. 다른 방법 시도 중.</p>
+
+<div class="card">
+  <h2>🥇 방법 1: Yahoo Finance (.KS 형식)</h2>
+  <p>가장 추천 - 미국 ETF랑 같은 방식</p>
+  <button class="btn btn-yahoo" onclick="testYahooSingle('442320', 'HANARO 원자력')">단일 테스트</button>
+  <button class="btn btn-yahoo" onclick="testYahooAll()">▶ 6종 모두 테스트</button>
+</div>
+
+<div class="card">
+  <h2>🥈 방법 2: CORS 프록시 + 공공데이터 API</h2>
+  <p>Yahoo가 안 되면 이 방법</p>
+  <button class="btn btn-proxy" onclick="testProxy('corsproxy.io')">corsproxy.io</button>
+  <button class="btn btn-proxy" onclick="testProxy('allorigins')">allorigins.win</button>
+  <button class="btn btn-proxy" onclick="testProxy('codetabs')">codetabs.com</button>
+</div>
+
+<div class="card">
+  <h2>🥉 방법 3: Naver Finance (대체)</h2>
+  <p>Yahoo도 프록시도 안 되면 시도</p>
+  <button class="btn" onclick="testNaver('442320')">Naver 테스트</button>
+</div>
+
+<div class="card">
+  <button class="btn btn-clear" onclick="clearLog()">🗑️ 로그 지우기</button>
+</div>
+
+<div class="card">
+  <h2>📊 결과</h2>
+  <div id="resultTable"></div>
+  <div id="log" class="log">대기 중...</div>
+</div>
+
+<script>
+const SERVICE_KEY = 'f6b7264cb22176f54a2bced3e507830b8ed18738ff8d06fac4040287a5649eb2';
+
+const KOREA_ETFS = [
+  {code:'442320', name:'HANARO 원자력iSelect', sector:'원자력'},
+  {code:'449450', name:'PLUS K방산', sector:'방산'},
+  {code:'466820', name:'TIGER 조선TOP10', sector:'조선'},
+  {code:'381180', name:'TIGER Fn반도체TOP10', sector:'반도체'},
+  {code:'117700', name:'KODEX 건설', sector:'건설'},
+  {code:'244620', name:'KODEX 바이오', sector:'바이오'},
+];
+
+const logEl = document.getElementById('log');
+
+function log(msg, type='') {
+  const time = new Date().toLocaleTimeString();
+  const cls = type ? `class="${type}"` : '';
+  logEl.innerHTML += `<span ${cls}>[${time}] ${msg}</span>\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog() {
+  logEl.innerHTML = '';
+  document.getElementById('resultTable').innerHTML = '';
+}
+
+// ========== 방법 1: Yahoo Finance ==========
+async function fetchYahoo(code, range='1mo') {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${code}.KS?range=${range}&interval=1d`;
+  log(`📡 Yahoo: ${code}.KS`);
+  
+  try {
+    const res = await fetch(url);
+    log(`Status: ${res.status}`, res.ok ? 'ok' : 'err');
+    
+    if(!res.ok){
+      log(`❌ 실패: ${res.statusText}`, 'err');
+      return null;
+    }
+    
+    const data = await res.json();
+    if(data?.chart?.result?.[0]){
+      const r = data.chart.result[0];
+      const closes = r.indicators?.quote?.[0]?.close || [];
+      const opens = r.indicators?.quote?.[0]?.open || [];
+      const highs = r.indicators?.quote?.[0]?.high || [];
+      const lows = r.indicators?.quote?.[0]?.low || [];
+      const volumes = r.indicators?.quote?.[0]?.volume || [];
+      const timestamps = r.timestamp || [];
+      
+      const items = [];
+      for(let i=0; i<timestamps.length; i++){
+        if(closes[i] != null){
+          const d = new Date(timestamps[i] * 1000);
+          items.push({
+            date: d.toISOString().substring(0,10),
+            close: closes[i],
+            open: opens[i],
+            high: highs[i],
+            low: lows[i],
+            volume: volumes[i],
+          });
+        }
+      }
+      log(`✅ Yahoo 성공: ${items.length}개 데이터`, 'ok');
+      return items;
+    }
+    log(`⚠️ Yahoo 응답에 데이터 없음`, 'warn');
+    return null;
+  } catch(e) {
+    log(`❌ Yahoo 오류: ${e.message}`, 'err');
+    return null;
+  }
+}
+
+async function testYahooSingle(code, name){
+  log(`\n=== Yahoo: ${name} (${code}) ===`, 'warn');
+  const items = await fetchYahoo(code);
+  if(items && items.length > 0){
+    log(`\n최근 5개:`);
+    items.slice(-5).forEach(it => {
+      log(`  ${it.date} | 종가: ${Math.round(it.close)?.toLocaleString()}원 | 거래량: ${it.volume?.toLocaleString()}`);
+    });
+  }
+  log(`=== 종료 ===\n`);
+}
+
+async function testYahooAll(){
+  clearLog();
+  log(`🚀 Yahoo Finance 6종 테스트\n`, 'warn');
+  
+  const results = [];
+  for(const etf of KOREA_ETFS){
+    log(`--- ${etf.name} ---`);
+    const items = await fetchYahoo(etf.code, '1mo');
+    if(items && items.length > 0){
+      const latest = items[items.length-1];
+      results.push({
+        ...etf, success: true,
+        latest_date: latest.date,
+        latest_close: Math.round(latest.close).toLocaleString(),
+        count: items.length
+      });
+    } else {
+      results.push({...etf, success: false});
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  
+  showTable(results);
+  
+  const success = results.filter(r => r.success).length;
+  log(`\n🏁 완료: ${success}/${results.length} 성공`, success === results.length ? 'ok' : 'warn');
+  
+  if(success === results.length){
+    log(`\n✅ 완벽! Yahoo Finance 사용 가능`, 'ok');
+    log(`이제 trend-tracker에 통합 가능합니다.`, 'ok');
+  } else if(success > 0){
+    log(`\n⚠️ 일부만 성공. 나머지는 다른 방법 필요`, 'warn');
+  } else {
+    log(`\n❌ Yahoo도 실패. CORS 프록시 시도 필요`, 'err');
+  }
+}
+
+// ========== 방법 2: CORS 프록시 ==========
+async function testProxy(proxyType){
+  clearLog();
+  log(`🚀 CORS 프록시 테스트: ${proxyType}\n`, 'warn');
+  
+  const code = '442320';
+  const today = new Date();
+  const past = new Date(today.getTime() - 30 * 86400000);
+  const fmtDate = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  
+  const apiUrl = `https://apis.data.go.kr/1160100/service/GetSecuritiesProductInfoService/getETFPriceInfo`
+    + `?serviceKey=${SERVICE_KEY}`
+    + `&numOfRows=10`
+    + `&pageNo=1`
+    + `&resultType=json`
+    + `&likeSrtnCd=${code}`
+    + `&beginBasDt=${fmtDate(past)}`
+    + `&endBasDt=${fmtDate(today)}`;
+  
+  let proxyUrl;
+  if(proxyType === 'corsproxy.io'){
+    proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+  } else if(proxyType === 'allorigins'){
+    proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+  } else if(proxyType === 'codetabs'){
+    proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`;
+  }
+  
+  log(`📡 프록시: ${proxyType}`);
+  log(`URL: ${proxyUrl.substring(0, 200)}...`);
+  
+  try {
+    const res = await fetch(proxyUrl);
+    log(`Status: ${res.status}`, res.ok ? 'ok' : 'err');
+    
+    if(!res.ok){
+      log(`❌ 실패: ${res.statusText}`, 'err');
+      return;
+    }
+    
+    const text = await res.text();
+    log(`응답 (첫 500자):\n${text.substring(0, 500)}`);
+    
+    try {
+      const data = JSON.parse(text);
+      if(data?.response?.body?.items?.item){
+        const items = Array.isArray(data.response.body.items.item)
+          ? data.response.body.items.item
+          : [data.response.body.items.item];
+        log(`\n✅ 성공! ${items.length}개 데이터`, 'ok');
+        log(`최근 데이터:`);
+        items.slice(0, 3).forEach(it => {
+          log(`  ${it.basDt} | ${it.itmsNm} | 종가: ${it.clpr}원`);
+        });
+      } else {
+        log(`⚠️ 응답 구조 다름`, 'warn');
+        log(JSON.stringify(data).substring(0, 500));
+      }
+    } catch(e){
+      log(`❌ JSON 파싱 실패: ${e.message}`, 'err');
+      log(`(응답이 JSON이 아닐 수 있음)`, 'warn');
+    }
+  } catch(e) {
+    log(`❌ 오류: ${e.message}`, 'err');
+  }
+}
+
+// ========== 방법 3: Naver Finance ==========
+async function testNaver(code){
+  clearLog();
+  log(`🚀 Naver Finance 테스트\n`, 'warn');
+  
+  // Naver 비공식 API
+  const url = `https://api.finance.naver.com/siseJson.naver?symbol=${code}&requestType=1&startTime=20260301&endTime=20260427&timeframe=day`;
+  
+  log(`📡 Naver API`);
+  log(`URL: ${url}`);
+  
+  try {
+    const res = await fetch(url);
+    log(`Status: ${res.status}`, res.ok ? 'ok' : 'err');
+    
+    if(!res.ok){
+      log(`❌ 실패`, 'err');
+      return;
+    }
+    
+    const text = await res.text();
+    log(`응답 (첫 500자):\n${text.substring(0, 500)}`);
+  } catch(e){
+    log(`❌ Naver 오류: ${e.message}`, 'err');
+    log(`💡 Naver는 보통 CORS 차단됨`, 'warn');
+  }
+}
+
+// ========== 결과 테이블 ==========
+function showTable(results){
+  let html = '<table><thead><tr><th>종목</th><th>코드</th><th>섹터</th><th>최근일</th><th>종가</th><th>상태</th></tr></thead><tbody>';
+  results.forEach(r => {
+    const status = r.success 
+      ? `<span class="ok">✅ 성공 (${r.count}개)</span>` 
+      : `<span class="err">❌ 실패</span>`;
+    html += `<tr>
+      <td>${r.name}</td>
+      <td>${r.code}</td>
+      <td>${r.sector}</td>
+      <td>${r.latest_date || '-'}</td>
+      <td>${r.latest_close ? r.latest_close + '원' : '-'}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('resultTable').innerHTML = html;
+}
+
+window.addEventListener('load', () => {
+  log(`✅ 페이지 로드 완료`, 'ok');
+  log(`\n📋 권장 테스트 순서:`);
+  log(`  1. Yahoo Finance "▶ 6종 모두 테스트" (가장 빠름)`);
+  log(`  2. 만약 실패 → CORS 프록시 3가지 시도`);
+  log(`  3. 모두 실패 → Naver 시도`);
+});
+</script>
+
+</body>
+</html>
