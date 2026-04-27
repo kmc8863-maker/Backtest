@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📔 Trade Journal · 7개월 자산운용 테스트</title>
+<style>
+:root{
+  --bg:#0a0e15;--s1:#0f141d;--s2:#161d2a;--bd:rgba(255,255,255,.08);
+  --tx:#cdd6e8;--dm:#5a6478;--wh:#fff;
+  --cy:#00e5cc;--gn:#52d27a;--rd:#ff4060;--yl:#ffc107;--pu:#b57bee;--or:#ff8c42;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--tx);min-height:100vh;
+  font-size:14px;line-height:1.6;padding-bottom:60px;
+}
+.wrap{max-width:920px;margin:0 auto;padding:14px;}
+h1{font-size:1.3rem;color:var(--wh);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.sub{font-size:.75rem;color:var(--dm);margin-bottom:14px;}
+.badge{background:rgba(181,123,238,.15);color:var(--pu);padding:2px 8px;border-radius:4px;font-size:.6rem;font-weight:600;}
+
+.card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:10px;
+  padding:14px;margin-bottom:12px;
+}
+.card-title{
+  font-family:'Space Mono',monospace;font-size:.65rem;letter-spacing:1.5px;
+  color:var(--cy);margin-bottom:10px;
+}
+
+/* 큰 통계 카드 */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+.stat-card{
+  background:var(--s2);border:1px solid var(--bd);border-radius:8px;
+  padding:12px;text-align:center;
+}
+.stat-l{font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
+.stat-v{font-family:'Space Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--wh);}
+.stat-v.gn{color:var(--gn);}
+.stat-v.rd{color:var(--rd);}
+.stat-v.cy{color:var(--cy);}
+.stat-v.yl{color:var(--yl);}
+
+/* D-Day 카운터 */
+.dday{
+  background:linear-gradient(135deg,rgba(181,123,238,.15),rgba(0,229,204,.1));
+  border:2px solid rgba(181,123,238,.4);
+  border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;
+}
+.dday-label{font-size:.6rem;color:var(--dm);letter-spacing:2px;}
+.dday-value{font-family:'Space Mono',monospace;font-size:2.2rem;font-weight:700;color:var(--pu);margin:4px 0;}
+.dday-progress{
+  height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin-top:8px;
+}
+.dday-bar{
+  height:100%;background:linear-gradient(90deg,var(--cy),var(--pu));
+  transition:width .6s ease;
+}
+.dday-text{font-size:.65rem;color:var(--tx);margin-top:6px;}
+
+/* 입력 폼 */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.form-row.full{grid-template-columns:1fr;}
+label{font-size:.6rem;color:var(--dm);letter-spacing:1px;display:block;margin-bottom:3px;text-transform:uppercase;}
+input,select,textarea{
+  width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:6px;
+  color:var(--wh);padding:8px 10px;font-size:.85rem;font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--cy);}
+textarea{resize:vertical;min-height:50px;}
+
+.btn{
+  background:linear-gradient(135deg,var(--cy),#00b8a0);color:#000;font-weight:700;
+  border:none;padding:11px 20px;border-radius:6px;cursor:pointer;font-size:.85rem;
+  font-family:inherit;letter-spacing:.5px;transition:.2s;width:100%;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,204,.3);}
+.btn-sec{background:rgba(255,255,255,.08);color:var(--tx);}
+.btn-sec:hover{background:rgba(255,255,255,.15);box-shadow:none;}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+
+/* 거래 목록 */
+.trade-item{
+  background:var(--s2);border-left:3px solid var(--cy);border-radius:6px;
+  padding:10px 12px;margin-bottom:8px;
+}
+.trade-item.sell{border-left-color:var(--rd);}
+.trade-item.adjust{border-left-color:var(--yl);}
+.trade-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.trade-tk{font-family:'Space Mono',monospace;color:var(--wh);font-weight:600;font-size:.95rem;}
+.trade-action{font-size:.6rem;padding:2px 6px;border-radius:3px;font-weight:600;}
+.trade-action.buy{background:rgba(82,210,122,.15);color:var(--gn);}
+.trade-action.sell{background:rgba(255,64,96,.15);color:var(--rd);}
+.trade-action.adjust{background:rgba(255,193,7,.15);color:var(--yl);}
+.trade-meta{font-size:.65rem;color:var(--dm);font-family:'Space Mono',monospace;}
+.trade-amt{font-family:'Space Mono',monospace;color:var(--wh);font-size:.85rem;}
+.trade-pnl{font-family:'Space Mono',monospace;font-size:.75rem;font-weight:600;}
+.trade-pnl.gn{color:var(--gn);}
+.trade-pnl.rd{color:var(--rd);}
+.trade-note{font-size:.7rem;color:var(--tx);margin-top:5px;font-style:italic;}
+.trade-actions{display:flex;gap:5px;margin-top:6px;}
+.trade-actions button{
+  font-size:.55rem;padding:3px 8px;background:rgba(255,255,255,.05);
+  color:var(--dm);border:1px solid var(--bd);border-radius:3px;cursor:pointer;
+}
+.trade-actions button:hover{background:rgba(255,64,96,.1);color:var(--rd);}
+
+/* 주간 자가평가 */
+.score-row{display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:center;margin-bottom:6px;font-size:.75rem;}
+.score-input{text-align:center;font-family:'Space Mono',monospace;font-weight:700;}
+
+/* 탭 */
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--bd);}
+.tab{
+  flex:1;padding:10px;background:transparent;color:var(--dm);border:none;
+  font-size:.75rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;
+  font-family:inherit;
+}
+.tab.active{color:var(--cy);border-bottom-color:var(--cy);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* 차트 (간단 자산 곡선) */
+.chart-wrap{height:180px;background:var(--s2);border-radius:8px;padding:10px;margin-bottom:12px;}
+canvas{width:100%;height:100%;}
+
+/* 모바일 */
+@media(max-width:600px){
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .form-row{grid-template-columns:1fr;}
+  .btn-row{grid-template-columns:1fr;}
+}
+
+.empty{text-align:center;color:var(--dm);padding:30px;font-size:.8rem;}
+hr{border:none;border-top:1px solid var(--bd);margin:14px 0;}
+.note{font-size:.65rem;color:var(--dm);background:var(--s2);padding:8px 10px;border-radius:6px;margin-top:8px;line-height:1.5;}
+.warn{color:var(--yl);}
+.section-h{font-size:.75rem;color:var(--cy);margin:14px 0 8px;font-weight:600;letter-spacing:.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>📔 Trade Journal <span class="badge">v1.0</span></h1>
+<div class="sub">7개월 자산운용 테스트 기록 · 거래/심리/자가평가</div>
+
+<!-- D-Day -->
+<div class="dday">
+  <div class="dday-label">7개월 테스트</div>
+  <div class="dday-value" id="ddayValue">--</div>
+  <div class="dday-text" id="ddayText">시작일 설정 필요</div>
+  <div class="dday-progress"><div class="dday-bar" id="ddayBar" style="width:0%"></div></div>
+</div>
+
+<!-- 핵심 통계 -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-l">시작 자금</div>
+    <div class="stat-v cy" id="statStart">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">현재 평가액</div>
+    <div class="stat-v" id="statCurrent">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">누적 수익률</div>
+    <div class="stat-v" id="statReturn">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">실현 손익</div>
+    <div class="stat-v" id="statPnl">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">거래 횟수</div>
+    <div class="stat-v" id="statTrades">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">승률</div>
+    <div class="stat-v" id="statWin">--</div>
+  </div>
+</div>
+
+<!-- 탭 -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('add')">+ 거래 추가</button>
+  <button class="tab" onclick="showTab('list')">거래 목록</button>
+  <button class="tab" onclick="showTab('weekly')">주간 평가</button>
+  <button class="tab" onclick="showTab('settings')">설정</button>
+</div>
+
+<!-- 거래 추가 탭 -->
+<div class="tab-content active" id="tab-add">
+  <div class="card">
+    <div class="card-title">📝 새 거래 입력</div>
+    <div class="form-row">
+      <div>
+        <label>날짜</label>
+        <input type="date" id="tDate">
+      </div>
+      <div>
+        <label>구분</label>
+        <select id="tAction">
+          <option value="buy">매수 (Buy)</option>
+          <option value="sell">매도 (Sell)</option>
+          <option value="adjust">비중 조정 (Adjust)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>티커</label>
+        <input type="text" id="tTicker" placeholder="예: QQQ" style="text-transform:uppercase">
+      </div>
+      <div>
+        <label>채널</label>
+        <select id="tChannel">
+          <option value="domestic">🇰🇷 국내 (TIGER)</option>
+          <option value="us">🇺🇸 미국 직투</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>금액 (원)</label>
+        <input type="number" id="tAmount" placeholder="1000000" step="10000">
+      </div>
+      <div>
+        <label>가격</label>
+        <input type="number" id="tPrice" placeholder="500.00" step="0.01">
+      </div>
+    </div>
+    <div class="form-row" id="pnlRow" style="display:none">
+      <div>
+        <label>실현 손익 (매도 시)</label>
+        <input type="number" id="tPnl" placeholder="50000 또는 -30000">
+      </div>
+      <div>
+        <label>보유 기간</label>
+        <input type="text" id="tDays" placeholder="예: 4주">
+      </div>
+    </div>
+    <div class="form-row full">
+      <div>
+        <label>매매 사유 / 신호</label>
+        <textarea id="tNote" placeholder="예: STRONG 신호 + 1위 비중 30% 진입"></textarea>
+      </div>
+    </div>
+    <button class="btn" onclick="addTrade()">💾 거래 기록 저장</button>
+  </div>
+
+  <!-- 빠른 자산 업데이트 -->
+  <div class="card">
+    <div class="card-title">💰 현재 평가액 업데이트 (매주 토요일)</div>
+    <div class="form-row">
+      <div>
+        <label>국내 계좌 평가액</label>
+        <input type="number" id="vDomestic" placeholder="20000000">
+      </div>
+      <div>
+        <label>미국 계좌 평가액</label>
+        <input type="number" id="vUs" placeholder="40000000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>현금 잔고</label>
+        <input type="number" id="vCash" placeholder="10000000">
+      </div>
+      <div>
+        <label>날짜</label>
+        <input type="date" id="vDate">
+      </div>
+    </div>
+    <button class="btn btn-sec" onclick="updateValuation()">📈 평가액 업데이트</button>
+    <div class="note">매주 토요일 시그널 스캔 후 같이 기록하면 7개월 후 자산 곡선이 만들어집니다.</div>
+  </div>
+</div>
+
+<!-- 거래 목록 탭 -->
+<div class="tab-content" id="tab-list">
+  <div class="card">
+    <div class="card-title">📊 자산 곡선</div>
+    <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 모든 거래 기록</div>
+    <div id="tradeList"></div>
+  </div>
+</div>
+
+<!-- 주간 평가 탭 -->
+<div class="tab-content" id="tab-weekly">
+  <div class="card">
+    <div class="card-title">📊 이번 주 자가평가 (100점 만점)</div>
+    <div class="form-row">
+      <div>
+        <label>주차</label>
+        <input type="text" id="wWeek" placeholder="예: 2026-W18">
+      </div>
+      <div>
+        <label>평가 날짜</label>
+        <input type="date" id="wDate">
+      </div>
+    </div>
+
+    <div class="section-h">규칙 준수도 (각 20점)</div>
+    <div class="score-row"><span>① 매주 신호 스캔 했는가?</span><input type="number" class="score-input" id="s1" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>② 신호대로 매매했는가?</span><input type="number" class="score-input" id="s2" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>③ EMA 이탈 시 청산 지켰는가?</span><input type="number" class="score-input" id="s3" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>④ 감정적 매매 없었는가?</span><input type="number" class="score-input" id="s4" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>⑤ 손실 견딘 능력?</span><input type="number" class="score-input" id="s5" min="0" max="20" placeholder="0-20"></div>
+
+    <div class="form-row full">
+      <div>
+        <label>이번 주 메모 (배운 점, 실수, 다짐)</label>
+        <textarea id="wNote" placeholder="예: 2025-04-27. URA 신호 발생했지만 머뭇거리다 늦게 진입. 다음엔 신호 즉시 행동."></textarea>
+      </div>
+    </div>
+    <button class="btn" onclick="addWeekly()">💾 주간 평가 저장</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📈 주간 평가 이력</div>
+    <div id="weeklyList"></div>
+  </div>
+</div>
+
+<!-- 설정 탭 -->
+<div class="tab-content" id="tab-settings">
+  <div class="card">
+    <div class="card-title">⚙️ 테스트 설정</div>
+    <div class="form-row">
+      <div>
+        <label>시작 날짜</label>
+        <input type="date" id="cStart">
+      </div>
+      <div>
+        <label>시작 자금 (원)</label>
+        <input type="number" id="cFund" placeholder="50000000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>테스트 기간 (개월)</label>
+        <input type="number" id="cMonths" value="7" min="1" max="60">
+      </div>
+      <div>
+        <label>목표 CAGR (%)</label>
+        <input type="number" id="cTarget" value="20" placeholder="20">
+      </div>
+    </div>
+    <button class="btn" onclick="saveSettings()">💾 설정 저장</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📤 데이터 백업/복원</div>
+    <div class="btn-row">
+      <button class="btn btn-sec" onclick="exportData()">📥 JSON 내보내기</button>
+      <button class="btn btn-sec" onclick="document.getElementById('importFile').click()">📤 JSON 불러오기</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <div class="note warn">⚠️ 브라우저 캐시 삭제 시 데이터 사라짐 · 정기적으로 JSON 백업하세요.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗑️ 위험 영역</div>
+    <button class="btn btn-sec" onclick="resetAll()" style="background:rgba(255,64,96,.15);color:var(--rd)">⚠️ 모든 데이터 초기화</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ===== 데이터 관리 =====
+const KEY = 'trade_journal_v1';
+
+function loadData(){
+  const raw = localStorage.getItem(KEY);
+  if(!raw) return {settings:{}, trades:[], valuations:[], weekly:[]};
+  try{ return JSON.parse(raw); }
+  catch(e){ return {settings:{}, trades:[], valuations:[], weekly:[]}; }
+}
+
+function saveData(data){
+  localStorage.setItem(KEY, JSON.stringify(data));
+}
+
+let DATA = loadData();
+
+// ===== 탭 전환 =====
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='list'){ renderTrades(); drawEquity(); }
+  if(name==='weekly') renderWeekly();
+}
+
+// ===== 거래 추가 =====
+document.getElementById('tAction').addEventListener('change', function(){
+  document.getElementById('pnlRow').style.display = this.value==='sell' ? 'grid' : 'none';
+});
+
+function addTrade(){
+  const trade = {
+    id: Date.now(),
+    date: document.getElementById('tDate').value,
+    action: document.getElementById('tAction').value,
+    ticker: document.getElementById('tTicker').value.toUpperCase().trim(),
+    channel: document.getElementById('tChannel').value,
+    amount: parseFloat(document.getElementById('tAmount').value) || 0,
+    price: parseFloat(document.getElementById('tPrice').value) || 0,
+    pnl: parseFloat(document.getElementById('tPnl').value) || 0,
+    days: document.getElementById('tDays').value,
+    note: document.getElementById('tNote').value.trim()
+  };
+  if(!trade.date || !trade.ticker || !trade.amount){
+    alert('날짜·티커·금액 필수');
+    return;
+  }
+  DATA.trades.push(trade);
+  saveData(DATA);
+  // 입력 초기화
+  document.getElementById('tTicker').value = '';
+  document.getElementById('tAmount').value = '';
+  document.getElementById('tPrice').value = '';
+  document.getElementById('tPnl').value = '';
+  document.getElementById('tDays').value = '';
+  document.getElementById('tNote').value = '';
+  alert('✅ 거래 기록 저장 완료');
+  refreshStats();
+}
+
+function deleteTrade(id){
+  if(!confirm('이 거래를 삭제하시겠습니까?')) return;
+  DATA.trades = DATA.trades.filter(t => t.id !== id);
+  saveData(DATA);
+  renderTrades();
+  refreshStats();
+}
+
+// ===== 평가액 업데이트 =====
+function updateValuation(){
+  const val = {
+    date: document.getElementById('vDate').value,
+    domestic: parseFloat(document.getElementById('vDomestic').value) || 0,
+    us: parseFloat(document.getElementById('vUs').value) || 0,
+    cash: parseFloat(document.getElementById('vCash').value) || 0
+  };
+  if(!val.date){ alert('날짜 필수'); return; }
+  val.total = val.domestic + val.us + val.cash;
+  // 같은 날짜 있으면 업데이트
+  const idx = DATA.valuations.findIndex(v => v.date === val.date);
+  if(idx >= 0) DATA.valuations[idx] = val;
+  else DATA.valuations.push(val);
+  // 날짜순 정렬
+  DATA.valuations.sort((a,b) => a.date.localeCompare(b.date));
+  saveData(DATA);
+  alert(`✅ 평가액 ${(val.total/10000).toFixed(0)}만 저장됨`);
+  refreshStats();
+}
+
+// ===== 주간 평가 =====
+function addWeekly(){
+  const scores = [1,2,3,4,5].map(i => parseInt(document.getElementById('s'+i).value) || 0);
+  const w = {
+    week: document.getElementById('wWeek').value,
+    date: document.getElementById('wDate').value,
+    scores,
+    total: scores.reduce((a,b)=>a+b,0),
+    note: document.getElementById('wNote').value.trim()
+  };
+  if(!w.date || !w.week){ alert('주차·날짜 필수'); return; }
+  DATA.weekly.push(w);
+  saveData(DATA);
+  // 초기화
+  for(let i=1;i<=5;i++) document.getElementById('s'+i).value = '';
+  document.getElementById('wNote').value = '';
+  alert(`✅ 주간 평가 저장 (${w.total}/100점)`);
+  renderWeekly();
+}
+
+function deleteWeekly(week){
+  if(!confirm('삭제하시겠습니까?')) return;
+  DATA.weekly = DATA.weekly.filter(w => w.week !== week);
+  saveData(DATA);
+  renderWeekly();
+}
+
+// ===== 설정 =====
+function saveSettings(){
+  DATA.settings = {
+    start: document.getElementById('cStart').value,
+    fund: parseFloat(document.getElementById('cFund').value) || 0,
+    months: parseInt(document.getElementById('cMonths').value) || 7,
+    target: parseFloat(document.getElementById('cTarget').value) || 20
+  };
+  saveData(DATA);
+  alert('✅ 설정 저장');
+  refreshStats();
+}
+
+function loadSettings(){
+  const s = DATA.settings;
+  if(s.start) document.getElementById('cStart').value = s.start;
+  if(s.fund) document.getElementById('cFund').value = s.fund;
+  if(s.months) document.getElementById('cMonths').value = s.months;
+  if(s.target) document.getElementById('cTarget').value = s.target;
+}
+
+// ===== 백업/복원 =====
+function exportData(){
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trade-journal-${new Date().toISOString().substring(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try{
+      const imported = JSON.parse(ev.target.result);
+      if(!confirm('기존 데이터를 덮어쓰시겠습니까?')) return;
+      DATA = imported;
+      saveData(DATA);
+      alert('✅ 복원 완료');
+      location.reload();
+    }catch(err){
+      alert('❌ 파일 형식 오류: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetAll(){
+  if(!confirm('⚠️ 모든 데이터가 삭제됩니다. 계속하시겠습니까?')) return;
+  if(!confirm('진짜 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+  localStorage.removeItem(KEY);
+  DATA = {settings:{}, trades:[], valuations:[], weekly:[]};
+  alert('초기화 완료');
+  location.reload();
+}
+
+// ===== 렌더링 =====
+function refreshStats(){
+  const s = DATA.settings;
+  // D-Day
+  if(s.start){
+    const start = new Date(s.start);
+    const months = s.months || 7;
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+    const today = new Date();
+    const totalDays = Math.floor((end - start) / 86400000);
+    const passed = Math.floor((today - start) / 86400000);
+    const remaining = Math.floor((end - today) / 86400000);
+    const progress = Math.max(0, Math.min(100, (passed/totalDays)*100));
+
+    document.getElementById('ddayValue').textContent = remaining > 0 ? `D-${remaining}` : (remaining === 0 ? 'D-DAY' : `+${-remaining}일 경과`);
+    document.getElementById('ddayText').textContent = `${start.toISOString().substring(0,10)} ~ ${end.toISOString().substring(0,10)} · ${passed}/${totalDays}일`;
+    document.getElementById('ddayBar').style.width = progress + '%';
+  }
+
+  // 시작 자금
+  document.getElementById('statStart').textContent = s.fund ? formatWon(s.fund) : '--';
+
+  // 현재 평가액 (가장 최근 valuation)
+  const latest = DATA.valuations[DATA.valuations.length-1];
+  if(latest && s.fund){
+    const ret = (latest.total - s.fund) / s.fund;
+    document.getElementById('statCurrent').textContent = formatWon(latest.total);
+    const retEl = document.getElementById('statReturn');
+    retEl.textContent = (ret>=0?'+':'') + (ret*100).toFixed(1) + '%';
+    retEl.className = 'stat-v ' + (ret>=0?'gn':'rd');
+  } else {
+    document.getElementById('statCurrent').textContent = '--';
+    document.getElementById('statReturn').textContent = '--';
+  }
+
+  // 실현 손익 (매도 거래 합)
+  const sells = DATA.trades.filter(t => t.action === 'sell');
+  const totalPnl = sells.reduce((sum,t) => sum + (t.pnl || 0), 0);
+  const pnlEl = document.getElementById('statPnl');
+  pnlEl.textContent = formatWon(totalPnl);
+  pnlEl.className = 'stat-v ' + (totalPnl>=0?'gn':'rd');
+
+  // 거래 횟수
+  document.getElementById('statTrades').textContent = DATA.trades.length;
+
+  // 승률
+  if(sells.length > 0){
+    const wins = sells.filter(t => (t.pnl||0) > 0).length;
+    const winRate = (wins / sells.length * 100).toFixed(0);
+    document.getElementById('statWin').textContent = winRate + '%';
+  } else {
+    document.getElementById('statWin').textContent = '--';
+  }
+}
+
+function formatWon(n){
+  if(!n && n !== 0) return '--';
+  if(Math.abs(n) >= 100000000) return (n/100000000).toFixed(2) + '억';
+  if(Math.abs(n) >= 10000) return (n/10000).toFixed(0) + '만';
+  return n.toLocaleString() + '원';
+}
+
+function renderTrades(){
+  const list = document.getElementById('tradeList');
+  if(DATA.trades.length === 0){
+    list.innerHTML = '<div class="empty">아직 거래 기록 없음</div>';
+    return;
+  }
+  // 최신순 정렬
+  const sorted = [...DATA.trades].sort((a,b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(t => {
+    const actionLabel = {buy:'매수', sell:'매도', adjust:'조정'}[t.action];
+    const channel = t.channel === 'domestic' ? '🇰🇷' : '🇺🇸';
+    const pnlStr = t.action==='sell' && t.pnl
+      ? `<span class="trade-pnl ${t.pnl>=0?'gn':'rd'}">${t.pnl>=0?'+':''}${formatWon(t.pnl)}</span>`
+      : '';
+    return `<div class="trade-item ${t.action}">
+      <div class="trade-head">
+        <div>
+          <span class="trade-tk">${t.ticker}</span>
+          <span class="trade-action ${t.action}">${actionLabel}</span>
+          <span style="margin-left:6px">${channel}</span>
+        </div>
+        <span class="trade-amt">${formatWon(t.amount)}</span>
+      </div>
+      <div class="trade-meta">${t.date} ${t.price?'@ $'+t.price:''} ${t.days?'· '+t.days:''} ${pnlStr}</div>
+      ${t.note?`<div class="trade-note">${t.note}</div>`:''}
+      <div class="trade-actions">
+        <button onclick="deleteTrade(${t.id})">🗑️ 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderWeekly(){
+  const list = document.getElementById('weeklyList');
+  if(DATA.weekly.length === 0){
+    list.innerHTML = '<div class="empty">아직 주간 평가 없음</div>';
+    return;
+  }
+  const sorted = [...DATA.weekly].sort((a,b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(w => {
+    const tcolor = w.total >= 80 ? 'gn' : w.total >= 60 ? 'yl' : 'rd';
+    return `<div class="trade-item">
+      <div class="trade-head">
+        <div>
+          <span class="trade-tk">${w.week}</span>
+          <span class="trade-meta" style="margin-left:8px">${w.date}</span>
+        </div>
+        <span class="trade-pnl ${tcolor}" style="font-size:1rem">${w.total}/100</span>
+      </div>
+      <div class="trade-meta" style="font-size:.6rem">
+        ① ${w.scores[0]} · ② ${w.scores[1]} · ③ ${w.scores[2]} · ④ ${w.scores[3]} · ⑤ ${w.scores[4]}
+      </div>
+      ${w.note?`<div class="trade-note">${w.note}</div>`:''}
+      <div class="trade-actions">
+        <button onclick="deleteWeekly('${w.week}')">🗑️ 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 자산 곡선 =====
+function drawEquity(){
+  const canvas = document.getElementById('equityChart');
+  if(!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const H = 160;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  if(DATA.valuations.length < 2){
+    ctx.fillStyle = '#5a6478';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('평가액 데이터 2개 이상 필요', W/2, H/2);
+    return;
+  }
+
+  const vals = DATA.valuations.map(v => v.total);
+  const fund = DATA.settings.fund || vals[0];
+  const minV = Math.min(...vals, fund) * 0.97;
+  const maxV = Math.max(...vals, fund) * 1.03;
+  const PAD_L = 50, PAD_R = 12, PAD_T = 16, PAD_B = 28;
+  const GW = W - PAD_L - PAD_R;
+  const GH = H - PAD_T - PAD_B;
+  const sx = i => PAD_L + (i/(vals.length-1)) * GW;
+  const sy = v => PAD_T + (1 - (v-minV)/(maxV-minV)) * GH;
+
+  // 시작 자금 기준선
+  ctx.strokeStyle = 'rgba(58,80,104,.5)';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(PAD_L, sy(fund));
+  ctx.lineTo(W - PAD_R, sy(fund));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#5a6478';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('시작', PAD_L+2, sy(fund)-3);
+
+  // Y축 라벨
+  for(let i=0;i<=4;i++){
+    const v = minV + (maxV-minV) * (1 - i/4);
+    const y = PAD_T + GH * (i/4);
+    ctx.fillStyle = '#5a6478';
+    ctx.textAlign = 'right';
+    ctx.fillText(formatWon(v), PAD_L-3, y+3);
+  }
+
+  // 자산 곡선 (그라데이션 채우기)
+  ctx.beginPath();
+  vals.forEach((v,i) => {
+    const x = sx(i), y = sy(v);
+    if(i===0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(sx(vals.length-1), H - PAD_B);
+  ctx.lineTo(PAD_L, H - PAD_B);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(0,229,204,.2)');
+  grad.addColorStop(1, 'rgba(0,229,204,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // 라인
+  ctx.beginPath();
+  ctx.strokeStyle = '#00e5cc';
+  ctx.lineWidth = 2;
+  vals.forEach((v,i) => {
+    const x = sx(i), y = sy(v);
+    if(i===0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 포인트
+  vals.forEach((v,i) => {
+    ctx.fillStyle = '#00e5cc';
+    ctx.beginPath();
+    ctx.arc(sx(i), sy(v), 3, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // 마지막 값 라벨
+  const lastV = vals[vals.length-1];
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(formatWon(lastV), W - PAD_R - 4, sy(lastV) - 6);
+}
+
+// ===== 초기화 =====
+window.addEventListener('load', () => {
+  // 오늘 날짜 기본값
+  const today = new Date().toISOString().substring(0,10);
+  document.getElementById('tDate').value = today;
+  document.getElementById('vDate').value = today;
+  document.getElementById('wDate').value = today;
+  // 주차 자동 계산
+  const week = `${today.substring(0,4)}-W${getWeekNum(new Date())}`;
+  document.getElementById('wWeek').value = week;
+
+  loadSettings();
+  refreshStats();
+});
+
+function getWeekNum(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7).toString().padStart(2,'0');
+}
+
+window.addEventListener('resize', drawEquity);
+</script>
+</body>
+</html>

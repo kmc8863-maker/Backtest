@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EMA Tracker Pro">
+<meta name="theme-color" content="#06080c">
+<title>EMA Trend Tracker Pro</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap');
+:root{--bg:#06080c;--s1:#0c1018;--s2:#111822;--bd:#1c2838;--cy:#00d4ff;--gn:#00e676;--rd:#ff4455;--yl:#ffab00;--pu:#c084fc;--tx:#d0dce8;--dm:#4a5a6a;--wh:#f0f4f8}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:'Outfit',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 59px,rgba(0,212,255,0.012) 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,rgba(0,212,255,0.012) 60px);pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:14px 12px 80px}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px;border-bottom:1px solid var(--bd);margin-bottom:12px}
+.hdr h1{font-family:'DM Mono',monospace;font-size:.9rem;color:var(--cy);letter-spacing:3px;font-weight:500}
+.hdr .sub{font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-top:2px}
+.hdr .tm{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--dm);text-align:right}
+
+/* Market Filter Banner */
+.mkt-banner{padding:10px 14px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:.72rem;border:1px solid}
+.mkt-banner.bull{background:rgba(0,230,118,0.06);border-color:rgba(0,230,118,0.2);color:var(--gn)}
+.mkt-banner.bear{background:rgba(255,68,85,0.06);border-color:rgba(255,68,85,0.2);color:var(--rd)}
+.mkt-banner.neutral{background:rgba(255,171,0,0.06);border-color:rgba(255,171,0,0.2);color:var(--yl)}
+.mkt-banner .mkt-icon{font-size:1.2rem}
+.mkt-banner .mkt-info{flex:1}
+.mkt-banner .mkt-title{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:1px;font-weight:600}
+.mkt-banner .mkt-sub{font-size:.58rem;opacity:.8;margin-top:2px}
+
+/* Buttons */
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:12px;background:linear-gradient(135deg,rgba(0,212,255,0.07),rgba(0,230,118,0.04));border:1px solid rgba(0,212,255,0.2);border-radius:10px;color:var(--cy);font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:1.5px;cursor:pointer;transition:all .2s}
+.btn:hover{background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.35)}
+.btn:disabled{color:var(--dm);border-color:var(--bd);cursor:not-allowed}
+.btn-full{grid-column:1/-1}
+.btn .sp{display:none;width:12px;height:12px;border:2px solid var(--dm);border-top-color:var(--cy);border-radius:50%;animation:spin .7s linear infinite}
+.btn.ld .sp{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.pbar{width:100%;height:2px;background:var(--bd);border-radius:2px;margin-bottom:4px;overflow:hidden;display:none}
+.pbar.on{display:block}
+.pbar i{display:block;height:100%;background:var(--cy);border-radius:2px;transition:width .3s}
+.stxt{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--dm);text-align:center;margin-bottom:8px;min-height:14px}
+
+/* Section labels */
+.slbl{font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:3px;color:var(--dm);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* Cards */
+.c{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:6px;position:relative;overflow:hidden;animation:fu .3s ease both}
+.c::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--dm)}
+.c.buy::before{background:var(--gn)}.c.wait::before{background:var(--yl)}.c.sell::before{background:var(--rd)}.c.strong::before{background:var(--pu)}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.ct{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.ct .tk{font-family:'DM Mono',monospace;font-size:.9rem;font-weight:600;color:var(--wh)}
+.ct .wt{font-size:.55rem;color:var(--dm);margin-left:4px}
+.ct .sc{font-size:.6rem;color:var(--dm)}
+
+.sig{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:1px;padding:3px 8px;border-radius:16px;font-weight:600}
+.sig.buy{background:rgba(0,230,118,0.1);color:var(--gn);border:1px solid rgba(0,230,118,0.22)}
+.sig.strong{background:rgba(192,132,252,0.1);color:var(--pu);border:1px solid rgba(192,132,252,0.3)}
+.sig.wait{background:rgba(255,171,0,0.1);color:var(--yl);border:1px solid rgba(255,171,0,0.22)}
+.sig.sell{background:rgba(255,68,85,0.1);color:var(--rd);border:1px solid rgba(255,68,85,0.22)}
+.sig.na{background:rgba(74,90,106,0.1);color:var(--dm);border:1px solid var(--bd)}
+
+/* Stats grid */
+.cb{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:6px}
+.cs{text-align:center;padding:5px 2px;background:var(--s2);border-radius:5px}
+.cs .l{font-size:.48rem;color:var(--dm);letter-spacing:.5px;margin-bottom:1px}
+.cs .v{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500}
+.cs .v.up{color:var(--gn)}.cs .v.dn{color:var(--rd)}.cs .v.nu{color:var(--tx)}
+
+/* EMA/MACD chips */
+.ce{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:4px}
+.ec{text-align:center;padding:3px 2px;border-radius:4px;font-family:'DM Mono',monospace;font-size:.56rem}
+.ec .el{font-size:.44rem;color:var(--dm);display:block;margin-bottom:1px}
+.ec.ab{background:rgba(0,230,118,0.07);color:var(--gn)}
+.ec.bl{background:rgba(255,68,85,0.07);color:var(--rd)}
+.ec.nn{background:var(--s2);color:var(--dm)}
+
+/* Advanced chips */
+.ca{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:6px}
+.ac{text-align:center;padding:4px 2px;border-radius:4px;font-size:.56rem}
+.ac .al{font-size:.44rem;color:var(--dm);display:block;margin-bottom:1px;font-family:'DM Mono',monospace;letter-spacing:.5px}
+.ac.bull{background:rgba(0,230,118,0.07);color:var(--gn)}
+.ac.bear{background:rgba(255,68,85,0.07);color:var(--rd)}
+.ac.neut{background:var(--s2);color:var(--dm)}
+.ac.warn{background:rgba(255,171,0,0.07);color:var(--yl)}
+
+.cd{font-size:.65rem;color:var(--dm);padding-top:6px;border-top:1px solid var(--bd);line-height:1.5}
+
+/* Action box */
+.action-box{margin-top:6px;padding:8px 10px;border-radius:7px;font-size:.68rem;line-height:1.6;border:1px solid}
+.action-box.go{background:rgba(0,230,118,0.05);border-color:rgba(0,230,118,0.2);color:var(--gn)}
+.action-box.strong-go{background:rgba(192,132,252,0.05);border-color:rgba(192,132,252,0.25);color:var(--pu)}
+.action-box.hold{background:rgba(255,171,0,0.05);border-color:rgba(255,171,0,0.2);color:var(--yl)}
+.action-box.stop{background:rgba(255,68,85,0.05);border-color:rgba(255,68,85,0.2);color:var(--rd)}
+
+/* Portfolio section */
+.port-table{width:100%;font-size:.72rem;border-collapse:collapse}
+.port-table th{color:var(--dm);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:1px;border-bottom:1px solid var(--bd);padding:6px 4px;text-align:left}
+.port-table th:last-child,.port-table td:last-child{text-align:right}
+.port-table td{padding:8px 4px;border-bottom:1px solid rgba(28,40,56,0.4)}
+.port-table tr.cash-row{background:rgba(0,212,255,0.04)}
+.port-table tr.cash-row td{color:var(--cy);font-family:'DM Mono',monospace;font-weight:600}
+
+/* Fear & Greed gauge */
+.fgi-wrap{text-align:center;padding:14px 0 8px}
+.fgi-score{font-family:'DM Mono',monospace;font-size:2rem;font-weight:700}
+.fgi-lbl{font-size:.8rem;font-weight:600;margin-top:2px}
+.fgi-date{font-size:.56rem;color:var(--dm);margin-top:4px}
+.fgi-hist{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0}
+
+/* Market Filter section */
+.mf-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.mf-item{background:var(--s2);border-radius:6px;padding:8px;text-align:center}
+.mf-item .mf-l{font-size:.52rem;color:var(--dm);letter-spacing:1px;margin-bottom:3px;font-family:'DM Mono',monospace}
+.mf-item .mf-v{font-family:'DM Mono',monospace;font-size:.8rem;font-weight:600}
+
+/* Rules panel */
+.rules-grid{display:grid;gap:6px}
+.rule-item{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--s2);border-radius:7px;font-size:.68rem}
+.rule-num{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--cy);font-weight:600;min-width:20px}
+.rule-text{color:var(--tx);line-height:1.5}
+.rule-text strong{color:var(--wh)}
+
+.foot{font-size:.55rem;color:var(--dm);text-align:center;margin-top:16px;padding:10px;border:1px dashed rgba(74,90,106,0.2);border-radius:8px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div>
+      <h1>TREND TRACKER <span style="color:var(--pu);font-size:.65rem">PRO</span></h1>
+      <div class="sub">메인 7 + 사이클 5 · 🇰🇷 ISA 가능 / 🇺🇸 직투 표시 · 동적비중</div>
+    </div>
+    <div><div class="tm" id="tm">--</div></div>
+  </div>
+
+  <!-- Market Filter Banner -->
+  <div class="mkt-banner neutral" id="mktBanner">
+    <div class="mkt-icon">⏳</div>
+    <div class="mkt-info">
+      <div class="mkt-title">MARKET FILTER — 스캔 필요</div>
+      <div class="mkt-sub">S&P500 상태 확인 후 매수 가능 여부 판단</div>
+    </div>
+  </div>
+
+  <!-- Scan Button -->
+  <div class="btn-row">
+    <button class="btn btn-full" id="btnScan" onclick="scanAll()">
+      <div class="sp"></div>
+      <span>SCAN ALL STOCKS</span>
+    </button>
+  </div>
+
+  <div class="pbar" id="pb"><i id="pbf" style="width:0%"></i></div>
+  <div class="stxt" id="st"></div>
+
+  <!-- ★ 최종 결과 (상단으로 이동) -->
+  <div id="portfolioSection" style="display:none;margin-top:20px">
+    <div class="slbl" style="color:var(--pu);font-size:.9rem">★ 결론 — 이번 주 매매 가이드</div>
+    <div class="c" style="animation-delay:.1s;border:2px solid rgba(181,123,238,.4)">
+      <div id="portfolioContent"></div>
+    </div>
+  </div>
+
+  <!-- 🔥 3배 일봉 모니터 (매일 체크) -->
+  <div id="dailyMonitorSection" style="margin-top:20px">
+    <div class="slbl" style="color:var(--rd)">🔥 3배 일봉 모니터 (매일 체크)</div>
+    <div class="c" style="border:2px solid rgba(255,64,96,.3)">
+      <div style="font-size:.7rem;color:var(--tx);margin-bottom:10px;line-height:1.6">
+        💡 보유 중인 3배 ETF의 <strong style="color:var(--yl)">일봉 EMA10</strong>을 매일 확인.<br>
+        EMA10 이탈 시 <strong style="color:var(--rd)">다음날 시초가 청산</strong>이 원칙.
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="hold-TQQQ" onchange="saveHoldings()"> TQQQ
+        </label>
+        <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="hold-NUGT" onchange="saveHoldings()"> NUGT
+        </label>
+        <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="hold-LABU" onchange="saveHoldings()"> LABU
+        </label>
+        <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="hold-URAA" onchange="saveHoldings()"> URAA
+        </label>
+      </div>
+      <button class="btn" id="btnDaily" onclick="scanDaily()" style="background:linear-gradient(135deg,var(--rd),#cc3050);color:#fff;font-size:.75rem;padding:10px">
+        📊 일봉 EMA10 체크 (매일)
+      </button>
+      <div id="dailyResults" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- Holdings (개별 종목 상세) -->
+  <div class="slbl" style="margin-top:24px">메인 ETF (7) — 개별 종목 상세</div>
+  <div id="hld"></div>
+
+  <!-- Cycle ETFs -->
+  <div class="slbl">사이클 ETF (5) — 사이클 신호 시 진입</div>
+  <div id="cyc"></div>
+
+  <!-- Watchlist -->
+  <div class="slbl">워치리스트 (2)</div>
+  <div id="wtc"></div>
+
+  <!-- Market Filter Detail -->
+  <div style="margin-top:20px">
+    <div class="slbl">MARKET FILTER (시장 상태)</div>
+    <div class="c">
+      <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--wh);margin-bottom:8px">S&P 500 (SPY) 추세 분석</div>
+      <div class="mf-grid">
+        <div class="mf-item"><div class="mf-l">SPY 현재가</div><div class="mf-v" id="spyPrice" style="color:var(--tx)">--</div></div>
+        <div class="mf-item"><div class="mf-l">EMA20 대비</div><div class="mf-v" id="spyVsEma" style="color:var(--tx)">--</div></div>
+        <div class="mf-item"><div class="mf-l">매수 가능</div><div class="mf-v" id="buyOk" style="color:var(--tx)">--</div></div>
+        <div class="mf-item"><div class="mf-l">시장 상태</div><div class="mf-v" id="mktState" style="color:var(--tx)">--</div></div>
+      </div>
+      <div style="margin-top:10px;padding:8px;background:var(--s2);border-radius:6px;font-size:.64rem;color:var(--tx);line-height:1.7" id="mktRule">
+        스캔 후 시장 상태가 표시됩니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- Fear & Greed -->
+  <div style="margin-top:20px">
+    <div class="slbl">MARKET SENTIMENT</div>
+    <div class="c">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--wh);font-weight:600">Fear & Greed Index</div>
+          <div style="font-size:.58rem;color:var(--dm);margin-top:1px">SPY 모멘텀 + 52주 강도 기반</div>
+        </div>
+        <button onclick="loadFearGreed()" style="padding:4px 10px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:6px;color:var(--cy);font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer">REFRESH</button>
+      </div>
+      <div class="fgi-wrap">
+        <canvas id="fgiGauge" width="280" height="150" style="max-width:100%"></canvas>
+        <div class="fgi-score" id="fgiValue" style="color:var(--dm)">--</div>
+        <div class="fgi-lbl" id="fgiLabel" style="color:var(--dm)">스캔 후 자동 업데이트</div>
+        <div class="fgi-date" id="fgiDate">--</div>
+      </div>
+      <div class="fgi-hist">
+        <div class="cs"><div class="l">현재</div><div class="v nu" id="fgiNow">--</div></div>
+        <div class="cs"><div class="l">RSI</div><div class="v nu" id="fgiRsi">--</div></div>
+        <div class="cs"><div class="l">모멘텀</div><div class="v nu" id="fgiMom">--</div></div>
+        <div class="cs"><div class="l">강도</div><div class="v nu" id="fgiStr">--</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:.52rem;text-align:center">
+        <div style="padding:4px 1px;background:rgba(255,68,85,0.12);border-radius:4px;color:var(--rd)">0-25<br>극단공포</div>
+        <div style="padding:4px 1px;background:rgba(255,100,85,0.08);border-radius:4px;color:#ff7755">25-45<br>공포</div>
+        <div style="padding:4px 1px;background:rgba(255,171,0,0.08);border-radius:4px;color:var(--yl)">45-55<br>중립</div>
+        <div style="padding:4px 1px;background:rgba(100,200,100,0.08);border-radius:4px;color:#88dd88">55-75<br>탐욕</div>
+        <div style="padding:4px 1px;background:rgba(0,230,118,0.12);border-radius:4px;color:var(--gn)">75-100<br>극단탐욕</div>
+      </div>
+      <div style="margin-top:10px;padding:8px;background:var(--s2);border-radius:6px;font-size:.64rem;color:var(--tx);line-height:1.7" id="fgiTip">
+        REFRESH를 눌러 최신 지수를 불러오세요.
+      </div>
+      <a href="https://www.cnn.com/markets/fear-and-greed" target="_blank" style="display:block;margin-top:8px;padding:7px;text-align:center;background:var(--s2);border:1px solid var(--bd);border-radius:6px;font-family:'DM Mono',monospace;font-size:.6rem;color:var(--cy);text-decoration:none">CNN Fear & Greed 전체 보기 →</a>
+    </div>
+  </div>
+
+  <!-- Trading Rules -->
+  <div style="margin-top:20px">
+    <div class="slbl">MY TRADING RULES</div>
+    <div class="c">
+      <div class="rules-grid">
+        <div class="rule-item">
+          <div class="rule-num">①</div>
+          <div class="rule-text"><strong>시장 필터</strong> — S&P500 EMA20 위일 때만 신규 매수. 아래면 매수 중단, 2주 연속 아래면 포지션 50% 축소</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">②</div>
+          <div class="rule-text"><strong>9점 시스템</strong> — EMA 7조건 + 섹터 정배열 +1 + S&P500 정배열 +1. 7점 이상만 매수, 4점 이하 매도</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">③</div>
+          <div class="rule-text"><strong>피라미딩</strong> — 1차 40% 진입 → +5% 상승 시 35% 추가 → +10% 시 25% 추가. 오를수록 더 태우기</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">④</div>
+          <div class="rule-text"><strong>트레일링 스탑</strong> — 수익 +10%: 고점-15% / +30%: 고점-12% / +50%: 고점-10%. EMA20 이탈 시 무조건 청산</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">⑤</div>
+          <div class="rule-text"><strong>변동성 사이징</strong> — ATR 2% 이하: 최대 25% / 2~4%: 최대 15% / 4% 이상: 최대 8%</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">⑥</div>
+          <div class="rule-text"><strong>섹터 로테이션</strong> — 격주 토요일: 점수 하위 1개 축소 → 점수 상위 관찰 종목으로 교체</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-num">⑦</div>
+          <div class="rule-text"><strong>어닝 규칙</strong> — 실적 3일 전 신규 진입 금지. 어닝 서프라이즈 + 정배열 유지 시 불타기. 실망 + EMA 이탈 시 즉시 청산</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Twelve Data API · 주봉 EMA/MACD/RSI · 800 calls/day<br>
+    For reference only. Not investment advice.
+  </div>
+</div>
+
+<script>
+const TD_KEY = 'aa87760dae7b4654a35d136302b3ea0e';
+const BASE = 'https://api.twelvedata.com';
+
+// 메인 ETF (6개) - 변경 후
+// 메인 ETF (7개) - QQQ, SMH만 국내 ETF로 매핑 (백테스팅과 100% 일치)
+const HOLD = [
+  {t:'QQQ',  n:'Nasdaq100',     w:'25%', cat:'main', kr:{code:'133690', name:'TIGER 미국나스닥100', isa:true}},
+  {t:'SMH',  n:'Semiconductors',w:'동적', cat:'main', kr:{code:'381180', name:'TIGER 미국필라델피아반도체', isa:true}},
+  {t:'ITA',  n:'Defense',       w:'15%', cat:'main', kr:null}, // 직투 (PLUS 미국방산은 운용사 다름)
+  {t:'URA',  n:'Uranium',       w:'12%', cat:'main', kr:null}, // 직투 (한국 미상장)
+  {t:'GDX',  n:'Gold Miners',   w:'10%', cat:'main', kr:null}, // 직투 (금광주 ≠ 금현물)
+  {t:'IBB',  n:'Biotech',       w:'10%', cat:'main', kr:null}, // 직투 (지수 다름)
+  {t:'COPX', n:'Copper',        w:'8%',  cat:'main', kr:null}, // 직투 (한국 미상장)
+];
+
+// 사이클 ETF (5개) - 신호 발생 시 진입 (모두 직투)
+const CYCLE = [
+  {t:'TLT',  n:'장기채',     cat:'cycle', kr:null}, // 직투 (현물 vs 선물 차이)
+  {t:'DBC',  n:'원자재',     cat:'cycle', kr:null}, // 직투 (원자재 종합 ≠ 원유만)
+  {t:'EEM',  n:'신흥국',     cat:'cycle', kr:null}, // 직투 (지수 약간 차이)
+  {t:'VNQ',  n:'미국 리츠',  cat:'cycle', kr:null}, // 직투 (환헤지 차이)
+  {t:'REMX', n:'희토류',     cat:'cycle', kr:null}, // 직투 (한국 미상장)
+];
+
+// 워치리스트 (2개) - 모두 직투
+const WATCH = [
+  {t:'XLF',  n:'Financials', kr:null}, // 직투 (한국 금융 ≠ 미국 금융)
+  {t:'FNGS', n:'FANG+',      kr:null}, // 직투 (커버드콜 다름)
+];
+
+// 3배 ETF는 모두 직투 (한국 미상장)
+const LEV_KR = {
+  'TQQQ': null, // 직투 (TIGER 나스닥100 레버리지 2배는 있음 - 233740)
+  'NUGT': null, // 직투
+  'LABU': null, // 직투
+  'URAA': null, // 직투
+};
+
+// Global scan results & SPY state
+const SCAN_RESULTS = {};
+let SPY_STATE = null; // 'bull' | 'bear' | 'neutral'
+let SPY_DATA = null;
+
+// ── API ──
+async function tdFetch(endpoint, params) {
+  const qs = new URLSearchParams({...params, apikey: TD_KEY}).toString();
+  const res = await fetch(`${BASE}/${endpoint}?${qs}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.code === 429) throw new Error('Rate limit');
+  if (data.status === 'error') throw new Error(data.message || 'API error');
+  return data;
+}
+
+async function getTimeSeries(symbol, interval='1week', size=60) {
+  const data = await tdFetch('time_series', {symbol, interval, outputsize: size});
+  if (!data.values?.length) throw new Error('No data');
+  return data.values.slice().reverse().map(v => parseFloat(v.close));
+}
+
+// ── Indicators ──
+function calcEMA(prices, period) {
+  if (prices.length < period) return null;
+  const k = 2 / (period + 1);
+  let ema = prices.slice(0, period).reduce((a,b) => a+b, 0) / period;
+  for (let i = period; i < prices.length; i++) ema = prices[i]*k + ema*(1-k);
+  return ema;
+}
+
+function calcRSI(prices, period=14) {
+  if (prices.length < period+1) return null;
+  let gains=0, losses=0;
+  for (let i=1; i<=period; i++) {
+    const d = prices[i]-prices[i-1];
+    if (d>0) gains+=d; else losses-=d;
+  }
+  let ag=gains/period, al=losses/period;
+  for (let i=period+1; i<prices.length; i++) {
+    const d = prices[i]-prices[i-1];
+    ag=(ag*(period-1)+(d>0?d:0))/period;
+    al=(al*(period-1)+(d<0?-d:0))/period;
+  }
+  if (al===0) return 100;
+  return 100-(100/(1+ag/al));
+}
+
+function calcATR(prices, period=14) {
+  if (prices.length < period+1) return null;
+  const trs = [];
+  for (let i=1; i<prices.length; i++) trs.push(Math.abs(prices[i]-prices[i-1]));
+  let atr = trs.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  for (let i=period; i<trs.length; i++) atr=(atr*(period-1)+trs[i])/period;
+  return (atr/prices[prices.length-1])*100; // % ATR
+}
+
+function calcMACD(prices) {
+  if (prices.length < 35) return null;
+  const k12=2/13, k26=2/27, k9=2/10;
+  let ema12=prices.slice(0,12).reduce((a,b)=>a+b,0)/12;
+  let ema26=prices.slice(0,26).reduce((a,b)=>a+b,0)/26;
+  for (let i=12;i<26;i++) ema12=prices[i]*k12+ema12*(1-k12);
+  const macdLine=[];
+  for (let i=26;i<prices.length;i++) {
+    ema12=prices[i]*k12+ema12*(1-k12);
+    ema26=prices[i]*k26+ema26*(1-k26);
+    macdLine.push(ema12-ema26);
+  }
+  if (macdLine.length<9) return null;
+  let sig=macdLine.slice(0,9).reduce((a,b)=>a+b,0)/9;
+  const histLine=[];
+  for (let i=9;i<macdLine.length;i++) {
+    sig=macdLine[i]*k9+sig*(1-k9);
+    histLine.push(macdLine[i]-sig);
+  }
+  if (histLine.length<2) return null;
+  const hist=histLine[histLine.length-1];
+  const prevHist=histLine[histLine.length-2];
+  return {
+    hist, prevHist,
+    crossUp: prevHist<0 && hist>=0,
+    crossDn: prevHist>0 && hist<=0
+  };
+}
+
+// ── SPY Market Filter ──
+async function scanSPY() {
+  const closes = await getTimeSeries('SPY', '1week', 60);
+  const price = closes[closes.length-1];
+  const ema20 = calcEMA(closes, 20);
+  const ema5 = calcEMA(closes, 5);
+  const ema10 = calcEMA(closes, 10);
+  const rsi = calcRSI(closes);
+  const macd = calcMACD(closes);
+
+  const aligned = ema5>ema10 && ema10>ema20;
+  const abvEma20 = price>ema20;
+
+  SPY_DATA = {price, ema5, ema10, ema20, rsi, macd, aligned, abvEma20};
+
+  if (aligned && abvEma20) SPY_STATE='bull';
+  else if (!abvEma20) SPY_STATE='bear';
+  else SPY_STATE='neutral';
+
+  // Update banner
+  const banner = document.getElementById('mktBanner');
+  const spyPriceEl = document.getElementById('spyPrice');
+  const spyVsEmaEl = document.getElementById('spyVsEma');
+  const buyOkEl = document.getElementById('buyOk');
+  const mktStateEl = document.getElementById('mktState');
+  const mktRuleEl = document.getElementById('mktRule');
+
+  spyPriceEl.textContent = '$'+price.toFixed(1);
+  const pct = ((price-ema20)/ema20*100).toFixed(1);
+  spyVsEmaEl.textContent = (pct>0?'+':'')+pct+'%';
+  spyVsEmaEl.style.color = pct>0?'var(--gn)':'var(--rd)';
+
+  if (SPY_STATE==='bull') {
+    banner.className='mkt-banner bull';
+    banner.innerHTML=`<div class="mkt-icon">🟢</div><div class="mkt-info"><div class="mkt-title">BULL MARKET — 매수 가능</div><div class="mkt-sub">S&P500 EMA 정배열 · 신규 진입 OK</div></div>`;
+    buyOkEl.textContent='✅ 가능';buyOkEl.style.color='var(--gn)';
+    mktStateEl.textContent='강세장';mktStateEl.style.color='var(--gn)';
+    mktRuleEl.textContent='✅ 신규 매수 허용. 피라미딩 적극 활용하세요.';
+  } else if (SPY_STATE==='bear') {
+    banner.className='mkt-banner bear';
+    banner.innerHTML=`<div class="mkt-icon">🔴</div><div class="mkt-info"><div class="mkt-title">BEAR MARKET — 매수 중단</div><div class="mkt-sub">S&P500 EMA20 하방 · 신규 진입 금지</div></div>`;
+    buyOkEl.textContent='❌ 금지';buyOkEl.style.color='var(--rd)';
+    mktStateEl.textContent='약세장';mktStateEl.style.color='var(--rd)';
+    mktRuleEl.textContent='🔴 신규 매수 금지. 2주 연속 유지 시 기존 포지션 50% 축소 실행.';
+  } else {
+    banner.className='mkt-banner neutral';
+    banner.innerHTML=`<div class="mkt-icon">🟡</div><div class="mkt-info"><div class="mkt-title">NEUTRAL — 주의 구간</div><div class="mkt-sub">S&P500 EMA 전환 중 · 신중하게</div></div>`;
+    buyOkEl.textContent='🟡 신중';buyOkEl.style.color='var(--yl)';
+    mktStateEl.textContent='중립';mktStateEl.style.color='var(--yl)';
+    mktRuleEl.textContent='🟡 고점수 종목만 소량 진입. 피라미딩 자제.';
+  }
+
+  return SPY_STATE;
+}
+
+// ── Scan one ticker ──
+async function scanOne(ticker) {
+  try {
+    const closes = await getTimeSeries(ticker);
+    const price = closes[closes.length-1];
+    const prevClose = closes[closes.length-2];
+    const change = ((price-prevClose)/prevClose)*100;
+
+    const ema5=calcEMA(closes,5);
+    const ema10=calcEMA(closes,10);
+    const ema20=calcEMA(closes,20);
+    const rsi=calcRSI(closes);
+    const macd=calcMACD(closes);
+    const atrPct=calcATR(closes);
+
+    // 52주 신고가 대비 드로다운 (드로다운 트리거용)
+    const last52 = closes.slice(-52);
+    const high52 = Math.max(...last52);
+    const drawdownPct = ((price - high52) / high52) * 100; // 음수
+
+    const aligned=ema5>ema10 && ema10>ema20;
+    const abv5=price>ema5;
+    const abv20=price>ema20;
+
+    // ── 9-point scoring ──
+    let score=0;
+    if (abv5) score++;
+    if (ema5>ema10) score++;
+    if (ema10>ema20) score++;
+    if (abv20) score++;
+    if (aligned) score++;
+    if (macd?.hist>0) score++;
+    if (macd?.crossUp) score++;
+    // Bonus: SPY정배열 +1
+    if (SPY_STATE==='bull') score++;
+    // Max 9 (SPY=bull gives bonus)
+    // Actually cap at 9
+    score=Math.min(9,score);
+
+    // Signal
+    let signal='WAIT';
+    if (score>=7) signal='BUY';
+    if (score>=8 && macd?.crossUp) signal='STRONG';
+    if (score<=3) signal='SELL';
+    if (SPY_STATE==='bear' && signal==='BUY') signal='WAIT'; // Market filter override
+
+    // Volatility sizing
+    let maxPos=25;
+    if (atrPct>4) maxPos=8;
+    else if (atrPct>2) maxPos=15;
+
+    // Pyramiding guide
+    let pyramid='--';
+    if (signal==='BUY'||signal==='STRONG') {
+      pyramid=`1차 ${Math.round(maxPos*0.4)}% → +5% 시 ${Math.round(maxPos*0.35)}% → +10% 시 ${Math.round(maxPos*0.25)}%`;
+    }
+
+    // Trailing stop
+    let trailStop='EMA20 이탈 시 청산';
+
+    // MACD tag
+    const macdTag=macd
+      ?(macd.crossUp?'🟢 음→양 크로스':macd.crossDn?'🔴 양→음 크로스':macd.hist>0?'▲ 양수 유지':'▼ 음수 유지')
+      :'N/A';
+
+    const detail=`${score}/9점 | EMA: ${ema5?.toFixed(1)}/${ema10?.toFixed(1)}/${ema20?.toFixed(1)} | MACD: ${macdTag} | ATR: ${atrPct?.toFixed(1)}%`;
+
+    return {
+      price, change, rsi, ema5, ema10, ema20, aligned, macd,
+      atrPct, score, signal, maxPos, pyramid, trailStop, detail, drawdownPct, high52
+    };
+  } catch(e) {
+    return {
+      price:null,change:null,rsi:null,ema5:null,ema10:null,ema20:null,
+      aligned:false,macd:null,atrPct:null,score:0,signal:'ERR',
+      maxPos:0,pyramid:'--',trailStop:'--',detail:'Error: '+e.message
+    };
+  }
+}
+
+// ── Update card UI ──
+function updateCard(ticker, d) {
+  const card=document.getElementById(`c-${ticker}`);
+  if (!card) return;
+
+  const sigMap={BUY:'buy',STRONG:'strong',WAIT:'wait',SELL:'sell'};
+  const sg=document.getElementById(`sg-${ticker}`);
+  const sigLabels={BUY:'BUY',STRONG:'★ STRONG',WAIT:'WAIT',SELL:'SELL',ERR:'ERR'};
+  sg.textContent=sigLabels[d.signal]||d.signal;
+  sg.className='sig '+(sigMap[d.signal]||'na');
+  card.className='c '+(sigMap[d.signal]||'');
+
+  // Price
+  const pr=document.getElementById(`pr-${ticker}`);
+  pr.textContent=d.price?'$'+d.price.toFixed(2):'--';
+
+  // Change
+  const ch=document.getElementById(`ch-${ticker}`);
+  if (d.change!==null&&d.change!==undefined){
+    ch.textContent=(d.change>=0?'+':'')+d.change.toFixed(2)+'%';
+    ch.className='v '+(d.change>=0?'up':'dn');
+  }
+
+  // RSI
+  const rs=document.getElementById(`rs-${ticker}`);
+  if (d.rsi){rs.textContent=d.rsi.toFixed(0);rs.className='v '+(d.rsi>=70?'dn':'up');}
+
+  // EMA chips
+  [{id:'e5',label:'EMA5',val:d.ema5,above:d.price>d.ema5},
+   {id:'e10',label:'EMA10',val:d.ema10,above:d.price>d.ema10},
+   {id:'e20',label:'EMA20',val:d.ema20,above:d.price>d.ema20}]
+  .forEach(e=>{
+    const el=document.getElementById(`${e.id}-${ticker}`);
+    if (e.val){el.className='ec '+(e.above?'ab':'bl');el.innerHTML=`<span class="el">${e.label}</span>${e.val.toFixed(1)}`;}
+  });
+
+  // ALIGN chip
+  const al=document.getElementById(`al-${ticker}`);
+  al.className='ec '+(d.aligned?'ab':'bl');
+  al.innerHTML=`<span class="el">ALIGN</span>${d.aligned?'YES':'NO'}`;
+
+  // MACD chips
+  if (d.macd){
+    const mh=document.getElementById(`mh-${ticker}`);
+    mh.className='ac '+(d.macd.hist>=0?'bull':'bear');
+    mh.innerHTML=`<span class="al">MACD HIST</span>${d.macd.hist.toFixed(2)}`;
+
+    const mc=document.getElementById(`mc-${ticker}`);
+    if (d.macd.crossUp){mc.className='ac bull';mc.innerHTML=`<span class="al">CROSSOVER</span>음→양`;}
+    else if (d.macd.crossDn){mc.className='ac bear';mc.innerHTML=`<span class="al">CROSSOVER</span>양→음`;}
+    else{mc.className='ac neut';mc.innerHTML=`<span class="al">CROSSOVER</span>${d.macd.hist>0?'양유지':'음유지'}`;}
+
+    const ms=document.getElementById(`ms-${ticker}`);
+    const grow=d.macd.hist>d.macd.prevHist;
+    ms.className='ac '+(grow?'bull':'bear');
+    ms.innerHTML=`<span class="al">MOMENTUM</span>${grow?'▲ 강해짐':'▼ 약해짐'}`;
+  }
+
+  // Score + ATR chips
+  const sc=document.getElementById(`sc-${ticker}`);
+  if (d.score!==undefined){
+    const s=d.score;
+    const cls=s>=8?'bull':s>=6?'neut':s>=4?'warn':'bear';
+    const lbl=s>=8?'최강':s>=7?'매수':s>=5?'보통':s>=4?'대기':'약세';
+    sc.className='ac '+cls;
+    sc.innerHTML=`<span class="al">SCORE</span>${s}/9 ${lbl}`;
+  }
+
+  const at=document.getElementById(`at-${ticker}`);
+  if (d.atrPct){
+    const cls=d.atrPct>4?'bear':d.atrPct>2?'warn':'bull';
+    at.className='ac '+cls;
+    at.innerHTML=`<span class="al">ATR%</span>${d.atrPct.toFixed(1)}%`;
+  }
+
+  const mp=document.getElementById(`mp-${ticker}`);
+  if (d.maxPos){
+    mp.className='ac bull';
+    mp.innerHTML=`<span class="al">MAX POS</span>${d.maxPos}%`;
+  }
+
+  // Action box
+  const ab=document.getElementById(`ab-${ticker}`);
+  if (d.signal==='STRONG'){
+    ab.className='action-box strong-go';
+    ab.innerHTML=`<strong>★ 강한 매수</strong> — MACD 음→양 크로스 확인!<br>피라미딩: ${d.pyramid}<br>손절: ${d.trailStop}`;
+  } else if (d.signal==='BUY'){
+    const mktNote=SPY_STATE==='bull'?'✅ 시장 호조':'⚠️ 시장 주의';
+    ab.className='action-box go';
+    ab.innerHTML=`<strong>매수 가능</strong> (${mktNote})<br>피라미딩: ${d.pyramid}<br>손절: ${d.trailStop}`;
+  } else if (d.signal==='SELL'){
+    ab.className='action-box stop';
+    ab.innerHTML=`<strong>매수 금지</strong> — 추세 이탈 상태<br>보유 중이면 EMA20 확인 후 청산 검토`;
+  } else {
+    ab.className='action-box hold';
+    ab.innerHTML=`<strong>대기</strong> — 정배열 전환 확인 후 진입<br>관찰 목록 유지`;
+  }
+
+  document.getElementById(`dt-${ticker}`).textContent=d.detail;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ── Main scan ──
+async function scanAll() {
+  const btn=document.getElementById('btnScan');
+  const pb=document.getElementById('pb');
+  const pbf=document.getElementById('pbf');
+  const st=document.getElementById('st');
+
+  btn.disabled=true;btn.classList.add('ld');pb.classList.add('on');
+
+  // Step 1: SPY market filter
+  st.textContent='S&P500 시장 상태 확인 중...';
+  try { await scanSPY(); } catch(e) { SPY_STATE='neutral'; }
+  await sleep(8000);
+
+  const all=[...HOLD,...CYCLE,...WATCH];
+  let success=0;
+
+  for (let i=0;i<all.length;i++) {
+    const t=all[i].t;
+    st.textContent=`${t} 스캔 중... (${i+1}/${all.length})`;
+    pbf.style.width=((i+1)/all.length*100)+'%';
+
+    const data=await scanOne(t);
+    SCAN_RESULTS[t]={...data,name:all[i].n,defaultWeight:all[i].w};
+    updateCard(t,data);
+
+    if (data.signal!=='ERR') success++;
+    if (i<all.length-1) await sleep(8000);
+  }
+
+  st.textContent=`✅ 완료! ${success}/${all.length}개 스캔 | API ${success+1}회 호출 (SPY 포함)`;
+  document.getElementById('tm').textContent=new Date().toLocaleString('ko-KR');
+
+  // Auto-load Fear & Greed from SPY data
+  if (SPY_DATA) autoFearGreed();
+
+  if (success>0) buildPortfolio();
+
+  btn.disabled=false;btn.classList.remove('ld');pb.classList.remove('on');
+}
+
+// ── Auto Fear & Greed from SPY data ──
+function autoFearGreed() {
+  if (!SPY_DATA) return;
+  const d=SPY_DATA;
+  const momentumPct=((d.price-d.ema20)/d.ema20)*100;
+  const momentumScore=Math.min(100,Math.max(0,50+momentumPct*2));
+  const rsiScore=d.rsi||50;
+  let fgi=Math.round(momentumScore*0.5+rsiScore*0.5);
+  fgi=Math.min(100,Math.max(0,fgi));
+
+  drawGauge(fgi);
+  const color=getFgiColor(fgi);
+  document.getElementById('fgiValue').textContent=fgi;
+  document.getElementById('fgiValue').style.color=color;
+  document.getElementById('fgiLabel').textContent=getFgiLabel(fgi);
+  document.getElementById('fgiLabel').style.color=color;
+  document.getElementById('fgiDate').textContent='SPY 기반 추정 | '+new Date().toLocaleString('ko-KR');
+  document.getElementById('fgiTip').textContent=getFgiTip(fgi);
+  document.getElementById('fgiNow').textContent=fgi;
+  document.getElementById('fgiNow').style.color=color;
+  document.getElementById('fgiRsi').textContent=d.rsi?.toFixed(0)||'--';
+  document.getElementById('fgiMom').textContent=(momentumPct>0?'+':'')+momentumPct.toFixed(1)+'%';
+  document.getElementById('fgiMom').style.color=momentumPct>0?'var(--gn)':'var(--rd)';
+  document.getElementById('fgiStr').textContent=d.aligned?'강세':'약세';
+  document.getElementById('fgiStr').style.color=d.aligned?'var(--gn)':'var(--rd)';
+}
+
+// ── Portfolio builder ──
+// 드로다운 단계 계산 (QQQ 기준)
+function getDrawdownStage(){
+  const qqq = SCAN_RESULTS['QQQ'];
+  if(!qqq || !qqq.drawdownPct) return 0;
+  const dd = qqq.drawdownPct;
+  if(dd <= -40) return 3; // -40% → QQQ 100%
+  if(dd <= -30) return 2; // -30% → QQQ 60%
+  if(dd <= -20) return 1; // -20% → QQQ 30%
+  return 0;
+}
+
+function buildPortfolio() {
+  const results=Object.entries(SCAN_RESULTS).filter(([t,d])=>d.signal!=='ERR');
+  if (!results.length) return;
+
+  // ★ 드로다운 모드 체크 (가장 우선)
+  const ddStage = getDrawdownStage();
+  if(ddStage > 0){
+    return buildDrawdownPortfolio(ddStage);
+  }
+
+  const buys=results.filter(([t,d])=>d.signal==='BUY'||d.signal==='STRONG');
+  const waits=results.filter(([t,d])=>d.signal==='WAIT');
+  const sells=results.filter(([t,d])=>d.signal==='SELL');
+
+  // 3배 레버리지 페어
+  const LEV3X={'QQQ':'TQQQ','GDX':'NUGT','IBB':'LABU','URA':'URAA'};
+
+  const buyScored=buys.map(([t,d])=>{
+    let q=d.score||0;
+    if (d.macd?.crossUp) q+=1;
+    if (d.rsi>=75) q-=2;
+    else if (d.rsi>=70) q-=1;
+    if (d.price&&d.ema5){
+      const gap=Math.abs((d.price-d.ema5)/d.ema5)*100;
+      if (gap<2) q+=1;
+    }
+    if (d.signal==='STRONG') q+=2;
+    return {ticker:t,data:d,quality:q};
+  }).sort((a,b)=>b.quality-a.quality);
+
+  // ── 백테스팅 100% 일치: 동적 비중 (확정 옵션 ON) ──
+  // 기본 비중 + RSI 과열 페널티 + 변동성 역가중
+  const weights=[30,22,15,12,10,8,5,5];
+  const allocs=[];
+  let cumInvested = 0;
+
+  buyScored.forEach((item,i)=>{
+    let w=weights[i]||5;
+    const d=item.data;
+
+    // ✅ 확정 옵션 A: RSI 과열 페널티
+    if(d.rsi >= 70) w -= 7;
+    else if(d.rsi >= 55) w -= 3;
+
+    // ✅ 확정 옵션 C: 변동성 역가중 (ATR% 기준)
+    // 백테스팅 vol4w (주간 표준편차) ≈ ATR%/2 정도로 매핑
+    // ATR% > 6% (vol4w>3%) -> -5%
+    // ATR% 4~6% (vol4w 2~3%) -> -2%
+    // ATR% < 2% (vol4w<1%) -> +2%
+    if(d.atrPct > 6) w -= 5;
+    else if(d.atrPct > 4) w -= 2;
+    else if(d.atrPct < 2) w += 2;
+
+    // cap (백테스팅과 동일: 2~35%)
+    w = Math.max(2, Math.min(35, w));
+
+    // 95% 한도 체크 (백테스팅과 동일)
+    if(cumInvested + w > 95) return;
+
+    cumInvested += w;
+    allocs.push({...item, weight: Math.round(w)});
+  });
+
+  // ── 백테스팅 100% 일치: 3배 레버리지 추천 ──
+  // 백테스팅 조건: aligned + MACD+ + score>=5 (1배가 BUY 신호면 충족)
+  // 종목당 20% 비중, 현금 가용 한도 내
+  const lev3xRecs=[];
+  const totalBuy1x = allocs.reduce((s,a)=>s+a.weight,0);
+  let availForLev = Math.max(0, 100 - totalBuy1x - 5); // 현금 5% 최소 보장
+
+  // 백테스팅과 동일하게 LEV3X 매핑된 종목만, score 순으로
+  const levCandidates = buyScored.filter(item => {
+    const lev = LEV3X[item.ticker];
+    if(!lev) return false;
+    // 백테스팅 조건: aligned + macdOk + score>=5
+    if(item.data.score < 5) return false;
+    if(!item.data.aligned) return false;
+    if(!item.data.macd || item.data.macd.hist <= 0) return false;
+    return true;
+  });
+
+  levCandidates.forEach(item => {
+    const lev = LEV3X[item.ticker];
+    const w = Math.min(20, availForLev);
+    if(w < 5) return;
+    availForLev -= w;
+    lev3xRecs.push({base: item.ticker, lev, score: item.data.score, recWeight: w});
+  });
+
+  const totalBuy=allocs.reduce((s,a)=>s+a.weight,0);
+  // 3배 비중 합산
+  const lev3xTotal=lev3xRecs.reduce((s,r)=>s+r.recWeight,0);
+  const cash=Math.max(5,100-Math.min(85,totalBuy)-lev3xTotal);
+
+  let html=`
+    <div style="font-size:.72rem;color:var(--tx);margin-bottom:10px">
+      시장 상태: <strong style="color:${SPY_STATE==='bull'?'var(--gn)':SPY_STATE==='bear'?'var(--rd)':'var(--yl)'}">
+        ${SPY_STATE==='bull'?'🟢 강세 (매수 허용)':SPY_STATE==='bear'?'🔴 약세 (매수 금지)':'🟡 중립 (신중)'}
+      </strong>
+    </div>
+    <div style="font-size:.62rem;color:var(--dm);margin-bottom:6px">💰 기준: 1억원 운용 시 매매 금액 표시</div>
+    <table class="port-table">
+      <thead><tr><th>TICKER</th><th>SECTOR</th><th>SIG</th><th>WEIGHT</th><th>금액</th><th>채널</th></tr></thead>
+      <tbody>`;
+
+  // PORT 매핑 정보 가져오기 (한국 ETF 정보)
+  const allItems = [...HOLD, ...CYCLE, ...WATCH];
+  function getKr(t){ return allItems.find(x => x.t === t)?.kr; }
+
+  allocs.forEach(item=>{
+    const d=item.data;
+    const rsiWarn=d.rsi>=70?` <span style="color:var(--yl);font-size:.55rem">RSI${d.rsi?.toFixed(0)}</span>`:'';
+    const sigCls=item.data.signal==='STRONG'?'strong':'buy';
+    const amount = (item.weight * 100).toFixed(0); // 만원 단위 (1억 × weight%)
+    const kr = getKr(item.ticker);
+    const channel = kr
+      ? `<span style="color:var(--cy);font-size:.55rem">🇰🇷 ${kr.code}</span>`
+      : `<span style="color:var(--or);font-size:.55rem">🇺🇸 직투</span>`;
+    html+=`<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--wh);font-weight:600">${item.ticker}${rsiWarn}</td>
+      <td style="color:var(--tx);font-size:.62rem">${d.name}</td>
+      <td><span class="sig ${sigCls}" style="font-size:.55rem">${d.signal}</span></td>
+      <td style="font-family:'DM Mono',monospace;color:var(--gn);font-weight:600">${item.weight}%</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--gn);font-size:.65rem">${amount}만</td>
+      <td>${channel}</td>
+    </tr>`;
+  });
+
+  waits.forEach(([t,d])=>{
+    html+=`<tr style="opacity:.45">
+      <td style="font-family:'DM Mono',monospace">${t}</td>
+      <td style="font-size:.62rem;color:var(--dm)">${d.name}</td>
+      <td><span class="sig wait" style="font-size:.55rem">WAIT</span></td>
+      <td style="color:var(--dm)">0%</td>
+      <td style="color:var(--dm);font-size:.65rem">--</td>
+      <td style="color:var(--dm);font-size:.55rem">--</td>
+    </tr>`;
+  });
+
+  sells.forEach(([t,d])=>{
+    html+=`<tr style="opacity:.35">
+      <td style="font-family:'DM Mono',monospace">${t}</td>
+      <td style="font-size:.62rem;color:var(--dm)">${d.name}</td>
+      <td><span class="sig sell" style="font-size:.55rem">SELL</span></td>
+      <td style="color:var(--dm)">0%</td>
+      <td style="color:var(--dm);font-size:.65rem">--</td>
+      <td style="color:var(--dm);font-size:.55rem">--</td>
+    </tr>`;
+  });
+
+  const cashAmount = (cash * 100).toFixed(0);
+  html+=`<tr class="cash-row">
+    <td>CASH</td><td style="font-size:.62rem">현금 대기 (드로다운 매수)</td>
+    <td>—</td><td>${cash}%</td>
+    <td style="font-family:'DM Mono',monospace;color:var(--cy);font-size:.65rem">${cashAmount}만</td>
+    <td style="color:var(--dm);font-size:.55rem">—</td>
+  </tr></tbody></table>`;
+
+  // 3배 레버리지 추천 섹션
+  if (lev3xRecs.length>0) {
+    html+=`<div style="margin-top:14px;padding:10px;background:rgba(181,123,238,.05);border:1px solid rgba(181,123,238,.25);border-radius:8px">
+      <div style="color:var(--pu);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:1px;margin-bottom:6px">⚡ 3배 레버리지 추천 (강한 신호만) <span style="color:var(--or);font-size:.55rem">🇺🇸 모두 미국 직투 필요</span></div>`;
+    lev3xRecs.forEach(r=>{
+      const amt = (r.recWeight * 100).toFixed(0);
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.7rem;border-bottom:1px solid rgba(181,123,238,.08)">
+        <div><span style="font-family:'DM Mono',monospace;color:var(--wh);font-weight:600">${r.lev}</span> <span style="color:var(--dm);font-size:.6rem">← ${r.base} STRONG (${r.score}점)</span></div>
+        <div style="text-align:right">
+          <span style="font-family:'DM Mono',monospace;color:var(--pu);font-weight:600">${r.recWeight}%</span>
+          <span style="color:var(--pu);font-size:.6rem;margin-left:6px">${amt}만</span>
+        </div>
+      </div>`;
+    });
+    html+=`<div style="margin-top:6px;font-size:.58rem;color:var(--dm);line-height:1.6">
+      ※ 일봉 EMA10 정배열 + 시초가 매수 · 일봉 EMA10 이탈 즉시 청산 · 최대 4~8주 보유<br>
+      ※ 한국 상장 3배 ETF 없음 → 일반 계좌 직투 (양도세 22% 분리과세)
+    </div></div>`;
+  }
+
+  // 합계 검증
+  const invested1x = Math.min(85, totalBuy);
+  const lev3x = lev3xTotal;
+  const totalCash = Math.max(0, 100 - invested1x - lev3x);
+  const grandTotal = invested1x + lev3x + totalCash;
+
+  // ISA / 직투 분리 계산
+  let isaPct = 0, isaAmount = 0;
+  let directPct = 0, directAmount = 0;
+  allocs.forEach(item => {
+    const kr = getKr(item.ticker);
+    if(kr) { isaPct += item.weight; }
+    else { directPct += item.weight; }
+  });
+  // 3배는 모두 직투
+  directPct += lev3x;
+  isaAmount = isaPct * 100; // 만원
+  directAmount = directPct * 100;
+  const cashAmt = totalCash * 100;
+
+  html+=`
+    <div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.62rem">
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">1배 ETF</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--gn);font-size:.9rem;font-weight:600">${invested1x}%</div>
+      </div>
+      <div style="background:var(--s2);padding:8px;border-radius:6px;${lev3x>0?'border:1px solid rgba(181,123,238,.3)':''}">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">3배 ETF</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--pu);font-size:.9rem;font-weight:600">${lev3x}%</div>
+      </div>
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">현금</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--cy);font-size:.9rem;font-weight:600">${totalCash}%</div>
+      </div>
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">합계</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--wh);font-size:.9rem;font-weight:600">${grandTotal}%</div>
+      </div>
+    </div>
+
+    <!-- 채널별 매매 가이드 -->
+    <div style="margin-top:12px;padding:12px;background:rgba(0,229,204,.04);border-radius:8px">
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--cy);letter-spacing:1px;margin-bottom:8px">📍 1억 운용 시 채널별 매매 금액</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="padding:8px;background:rgba(0,229,204,.08);border-left:3px solid var(--cy);border-radius:4px">
+          <div style="font-size:.6rem;color:var(--cy);font-weight:700">🇰🇷 ISA (QQQ + SMH만)</div>
+          <div style="font-family:'DM Mono',monospace;color:var(--wh);font-size:1rem;font-weight:600;margin-top:3px">${isaPct.toFixed(0)}% · ${isaAmount.toFixed(0)}만</div>
+          <div style="font-size:.55rem;color:var(--dm);margin-top:2px">TIGER 나스닥100 · TIGER 반도체</div>
+        </div>
+        <div style="padding:8px;background:rgba(255,140,66,.08);border-left:3px solid var(--or);border-radius:4px">
+          <div style="font-size:.6rem;color:var(--or);font-weight:700">🇺🇸 미국 직투 (나머지 + 3배)</div>
+          <div style="font-family:'DM Mono',monospace;color:var(--wh);font-size:1rem;font-weight:600;margin-top:3px">${directPct.toFixed(0)}% · ${directAmount.toFixed(0)}만</div>
+          <div style="font-size:.55rem;color:var(--dm);margin-top:2px">양도세 22% (250만 공제)</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:6px 8px;background:rgba(255,193,7,.05);border-radius:4px;font-size:.6rem;color:var(--dm)">
+        💰 현금 대기: <strong style="color:var(--yl)">${cashAmt.toFixed(0)}만</strong> (드로다운 매수 또는 다음 신호 대기)
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:9px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.12);border-radius:6px;font-size:.62rem;color:var(--tx);line-height:1.7">
+      <div style="color:var(--cy);font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:1px;margin-bottom:4px">동적 비중 + 모멘텀 보너스</div>
+      • 점수 순위별: 1위 30% / 2위 22% / 3위 15% / 4위 12% ...<br>
+      • <strong style="color:var(--pu)">SPY 강세 + 1위:</strong> +3% 보너스<br>
+      • <strong style="color:var(--pu)">STRONG 8점↑:</strong> +3% 보너스<br>
+      • <strong style="color:var(--pu)">MACD 양 크로스:</strong> +3% 보너스<br>
+      • RSI ≥ 75 과열: -5% 페널티<br>
+      • 3배: STRONG + SPY 강세 + RSI&lt;70 시만 추천
+    </div>`;
+
+  document.getElementById('portfolioContent').innerHTML=html;
+  document.getElementById('portfolioSection').style.display='block';
+}
+
+// ── 드로다운 모드 전용 포트폴리오 화면 ──
+function buildDrawdownPortfolio(stage){
+  const qqq = SCAN_RESULTS['QQQ'];
+  const dd = qqq.drawdownPct.toFixed(1);
+  const stageLabels = {1:'-20% 트리거', 2:'-30% 트리거', 3:'-40% 트리거'};
+  const qqqWeights = {1:30, 2:60, 3:100};
+  const qqqW = qqqWeights[stage];
+  const cashW = 100 - qqqW;
+  const qqqAmt = (qqqW * 100).toFixed(0);
+  const cashAmt = (cashW * 100).toFixed(0);
+
+  let html = `
+    <div style="padding:14px;background:rgba(255,64,96,.1);border:2px solid var(--rd);border-radius:10px;margin-bottom:14px">
+      <div style="font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:2px;color:var(--rd);margin-bottom:8px">🚨 드로다운 모드 발동</div>
+      <div style="font-size:1.1rem;color:var(--wh);font-weight:700">QQQ 신고가 대비 ${dd}%</div>
+      <div style="font-size:.75rem;color:var(--tx);margin-top:4px">단계: <strong style="color:var(--rd)">${stageLabels[stage]}</strong></div>
+      <div style="margin-top:10px;padding:10px;background:var(--s2);border-radius:6px;font-size:.7rem;color:var(--tx);line-height:1.7">
+        ⚠️ 추세추종 모드 <strong style="color:var(--rd)">중단</strong><br>
+        🎯 모든 다른 ETF <strong style="color:var(--rd)">청산</strong><br>
+        💰 QQQ <strong style="color:var(--gn)">${qqqW}% 바이앤홀드</strong> (현금 ${cashW}%)<br>
+        🔄 신고가의 95% 회복 시 추세추종 복귀
+      </div>
+    </div>
+
+    <table class="port-table">
+      <thead><tr><th>TICKER</th><th>SECTOR</th><th>SIG</th><th>WEIGHT</th><th>금액</th><th>채널</th></tr></thead>
+      <tbody>
+        <tr style="background:rgba(82,210,122,.08)">
+          <td style="font-family:'DM Mono',monospace;color:var(--wh);font-weight:700">QQQ</td>
+          <td style="color:var(--tx);font-size:.62rem">Nasdaq100 (바이앤홀드)</td>
+          <td><span class="sig strong" style="font-size:.55rem">DD MODE</span></td>
+          <td style="font-family:'DM Mono',monospace;color:var(--gn);font-weight:600">${qqqW}%</td>
+          <td style="font-family:'DM Mono',monospace;color:var(--gn);font-size:.65rem">${qqqAmt}만</td>
+          <td><span style="color:var(--cy);font-size:.55rem">🇰🇷 133690</span></td>
+        </tr>
+        <tr class="cash-row">
+          <td>CASH</td><td style="font-size:.62rem">현금 (대기)</td>
+          <td>—</td><td>${cashW}%</td>
+          <td style="font-family:'DM Mono',monospace;color:var(--cy);font-size:.65rem">${cashAmt}만</td>
+          <td style="color:var(--dm);font-size:.55rem">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.62rem">
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">QQQ</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--gn);font-size:.9rem;font-weight:600">${qqqW}%</div>
+      </div>
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">3배</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--dm);font-size:.9rem;font-weight:600">0%</div>
+      </div>
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">현금</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--cy);font-size:.9rem;font-weight:600">${cashW}%</div>
+      </div>
+      <div style="background:var(--s2);padding:8px;border-radius:6px">
+        <div style="color:var(--dm);font-size:.5rem;margin-bottom:2px">합계</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--wh);font-size:.9rem;font-weight:600">100%</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding:12px;background:rgba(0,229,204,.04);border-radius:8px">
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--cy);letter-spacing:1px;margin-bottom:8px">📍 1억 운용 시 매매 금액</div>
+      <div style="padding:8px;background:rgba(0,229,204,.08);border-left:3px solid var(--cy);border-radius:4px">
+        <div style="font-size:.6rem;color:var(--cy);font-weight:700">🇰🇷 ISA / 일반계좌 (TIGER 미국나스닥100)</div>
+        <div style="font-family:'DM Mono',monospace;color:var(--wh);font-size:1rem;font-weight:600;margin-top:3px">${qqqW}% · ${qqqAmt}만</div>
+      </div>
+      <div style="margin-top:8px;padding:6px 8px;background:rgba(255,193,7,.05);border-radius:4px;font-size:.6rem;color:var(--dm)">
+        💰 현금 대기: <strong style="color:var(--yl)">${cashAmt}만</strong> (다음 단계 진입 또는 회복 대기)
+      </div>
+    </div>
+  `;
+
+  document.getElementById('portfolioContent').innerHTML = html;
+  document.getElementById('portfolioSection').style.display = 'block';
+}
+
+// ── 3배 일봉 모니터 ──
+
+// 보유 종목 저장/복원
+function saveHoldings(){
+  const holdings = ['TQQQ','NUGT','LABU','URAA'].filter(t =>
+    document.getElementById('hold-'+t)?.checked
+  );
+  localStorage.setItem('held_3x_tickers', JSON.stringify(holdings));
+}
+
+function loadHoldings(){
+  try{
+    const raw = localStorage.getItem('held_3x_tickers');
+    if(!raw) return;
+    const holdings = JSON.parse(raw);
+    holdings.forEach(t => {
+      const el = document.getElementById('hold-'+t);
+      if(el) el.checked = true;
+    });
+  }catch(e){}
+}
+
+// 매일 일봉 EMA10 체크
+async function scanDaily(){
+  const tickers = ['TQQQ','NUGT','LABU','URAA'].filter(t =>
+    document.getElementById('hold-'+t)?.checked
+  );
+
+  if(tickers.length === 0){
+    alert('보유 중인 3배 종목을 먼저 체크하세요');
+    return;
+  }
+
+  const btn = document.getElementById('btnDaily');
+  const resultsEl = document.getElementById('dailyResults');
+  btn.disabled = true;
+  btn.textContent = '⏳ 일봉 데이터 로딩 중...';
+
+  let html = '';
+  let holdCount = 0, exitCount = 0;
+
+  for(const t of tickers){
+    try{
+      // 일봉 30일치 (EMA10 + 여유)
+      const data = await tdFetch('time_series', {symbol:t, interval:'1day', outputsize:30});
+      if(!data.values?.length) throw new Error('No data');
+      const closes = data.values.slice().reverse().map(v => parseFloat(v.close));
+      const price = closes[closes.length-1];
+      const prevPrice = closes[closes.length-2];
+      const change = ((price-prevPrice)/prevPrice)*100;
+
+      // 일봉 EMA10 계산
+      const k = 2/11;
+      let ema10 = closes.slice(0,10).reduce((a,b)=>a+b,0)/10;
+      for(let i=10;i<closes.length;i++) ema10 = closes[i]*k + ema10*(1-k);
+
+      const above = price > ema10;
+      const gap = ((price - ema10) / ema10 * 100).toFixed(2);
+
+      if(above) holdCount++;
+      else exitCount++;
+
+      const status = above
+        ? '<span style="color:var(--gn);font-weight:600">✅ 보유 유지</span>'
+        : '<span style="color:var(--rd);font-weight:700">🚨 청산! 다음날 시초가 매도</span>';
+
+      const borderColor = above ? 'var(--gn)' : 'var(--rd)';
+
+      html += `<div style="padding:10px;background:var(--s2);border-left:3px solid ${borderColor};border-radius:6px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="font-family:'DM Mono',monospace;color:var(--wh);font-weight:700;font-size:.95rem">${t}</span>
+            <span style="font-family:'DM Mono',monospace;color:var(--tx);font-size:.7rem;margin-left:8px">$${price.toFixed(2)}</span>
+            <span style="font-family:'DM Mono',monospace;color:${change>=0?'var(--gn)':'var(--rd)'};font-size:.65rem;margin-left:6px">${change>=0?'+':''}${change.toFixed(2)}%</span>
+          </div>
+          ${status}
+        </div>
+        <div style="font-size:.62rem;color:var(--dm);margin-top:4px;font-family:'DM Mono',monospace">
+          EMA10: $${ema10.toFixed(2)} · 차이 ${gap}%
+        </div>
+      </div>`;
+
+      // API rate limit 대기
+      await new Promise(r => setTimeout(r, 1500));
+    }catch(e){
+      html += `<div style="padding:8px;color:var(--dm);font-size:.7rem">${t}: 오류 ${e.message}</div>`;
+    }
+  }
+
+  // 요약
+  const summaryHtml = `<div style="padding:10px;background:rgba(0,229,204,.05);border-radius:6px;margin-bottom:8px;font-size:.7rem">
+    <strong style="color:var(--cy)">체크 완료:</strong>
+    ✅ 보유 ${holdCount}개 ·
+    ${exitCount > 0 ? `<strong style="color:var(--rd)">🚨 청산 ${exitCount}개</strong>` : '청산 0개'}
+    <div style="font-size:.6rem;color:var(--dm);margin-top:3px">${new Date().toLocaleString('ko-KR')}</div>
+  </div>`;
+
+  resultsEl.innerHTML = summaryHtml + html;
+  btn.disabled = false;
+  btn.textContent = '📊 일봉 EMA10 체크 (매일)';
+}
+
+// 페이지 로드 시 보유 종목 복원
+window.addEventListener('load', loadHoldings);
+
+// ── Fear & Greed helpers ──
+function drawGauge(value) {
+  const canvas=document.getElementById('fgiGauge');
+  if (!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H-20,r=110;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,0);ctx.lineWidth=22;ctx.strokeStyle='#1c2838';ctx.stroke();
+  const safe=Math.max(1,Math.min(99,value));
+  const colors=['#ff4455','#ff7733','#ffab00','#88dd44','#00e676'];
+  const segCount=50;
+  for (let i=0;i<segCount;i++) {
+    const t0=i/segCount,t1=(i+1)/segCount;
+    if (t1>safe/100) break;
+    const ci=Math.floor(t0*colors.length);
+    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI+t0*Math.PI,Math.PI+t1*Math.PI);
+    ctx.lineWidth=22;ctx.strokeStyle=colors[Math.min(ci,colors.length-1)];ctx.stroke();
+  }
+  const na=Math.PI+(safe/100)*Math.PI;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+(r-5)*Math.cos(na),cy+(r-5)*Math.sin(na));
+  ctx.strokeStyle='#f0f4f8';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,6,0,2*Math.PI);ctx.fillStyle='#f0f4f8';ctx.fill();
+  ctx.font='10px monospace';ctx.fillStyle='#4a5a6a';ctx.textAlign='center';
+  ctx.fillText('0',cx-r-8,cy+4);ctx.fillText('100',cx+r+14,cy+4);ctx.fillText('50',cx,cy-r-8);
+}
+
+function getFgiColor(v){if(v<=25)return '#ff4455';if(v<=45)return '#ff7733';if(v<=55)return '#ffab00';if(v<=75)return '#88dd44';return '#00e676';}
+function getFgiLabel(v){if(v<=25)return '극단적 공포';if(v<=45)return '공포 (Fear)';if(v<=55)return '중립 (Neutral)';if(v<=75)return '탐욕 (Greed)';return '극단적 탐욕';}
+function getFgiTip(v){
+  if(v<=25)return '🟢 극단적 공포 — 최고의 매수 기회. 정배열 확인 후 적극 진입.';
+  if(v<=45)return '🟡 공포 — 눌림목 분할 매수 적합. EMA5 터치 시 진입 고려.';
+  if(v<=55)return '⚪ 중립 — 추세대로 홀드. 특별한 액션 불필요.';
+  if(v<=75)return '🟡 탐욕 — 신규 진입 신중. RSI 과매수 여부 확인.';
+  return '🔴 극단적 탐욕 — 신규 매수 자제. 청산 기준 강화.';
+}
+
+async function loadFearGreed() {
+  if (SPY_DATA) { autoFearGreed(); return; }
+  document.getElementById('fgiTip').textContent='스캔을 먼저 실행하면 자동으로 업데이트됩니다.';
+}
+
+// ── Card HTML ──
+function mkCard(item) {
+  const id=item.t;
+  const wt=item.w?`<span class="wt">${item.w}</span>`:'';
+
+  // 한국 ETF 정보 표시
+  let krBadge = '';
+  if(item.kr){
+    const note = item.kr.note ? ` (${item.kr.note})` : '';
+    krBadge = `<div style="margin-top:4px;padding:5px 8px;background:rgba(0,229,204,.08);border-left:3px solid var(--cy);border-radius:4px;font-size:.62rem;line-height:1.4">
+      <span style="color:var(--cy);font-weight:700">🇰🇷 ISA 가능</span>
+      <span style="color:var(--tx);font-family:'DM Mono',monospace"> ${item.kr.code}</span>
+      <div style="color:var(--dm);margin-top:2px">${item.kr.name}${note}</div>
+    </div>`;
+  } else {
+    krBadge = `<div style="margin-top:4px;padding:5px 8px;background:rgba(255,140,66,.08);border-left:3px solid var(--or);border-radius:4px;font-size:.62rem;line-height:1.4">
+      <span style="color:var(--or);font-weight:700">🇺🇸 미국 직투 필요</span>
+      <span style="color:var(--dm);margin-left:6px">국내 대체 없음</span>
+    </div>`;
+  }
+
+  return `<div class="c" id="c-${id}">
+    <div class="ct">
+      <div><span class="tk">${id}${wt}</span><div class="sc">${item.n}</div></div>
+      <span class="sig na" id="sg-${id}">--</span>
+    </div>
+    ${krBadge}
+    <div class="cb">
+      <div class="cs"><div class="l">PRICE</div><div class="v nu" id="pr-${id}">--</div></div>
+      <div class="cs"><div class="l">CHG%</div><div class="v nu" id="ch-${id}">--</div></div>
+      <div class="cs"><div class="l">RSI</div><div class="v nu" id="rs-${id}">--</div></div>
+    </div>
+    <div class="ce">
+      <div class="ec nn" id="e5-${id}"><span class="el">EMA5</span>--</div>
+      <div class="ec nn" id="e10-${id}"><span class="el">EMA10</span>--</div>
+      <div class="ec nn" id="e20-${id}"><span class="el">EMA20</span>--</div>
+      <div class="ec nn" id="al-${id}"><span class="el">ALIGN</span>--</div>
+    </div>
+    <div class="ca">
+      <div class="ac neut" id="mh-${id}"><span class="al">MACD HIST</span>--</div>
+      <div class="ac neut" id="mc-${id}"><span class="al">CROSSOVER</span>--</div>
+      <div class="ac neut" id="ms-${id}"><span class="al">MOMENTUM</span>--</div>
+      <div class="ac neut" id="sc-${id}"><span class="al">SCORE</span>--</div>
+      <div class="ac neut" id="at-${id}"><span class="al">ATR%</span>--</div>
+      <div class="ac neut" id="mp-${id}"><span class="al">MAX POS</span>--</div>
+    </div>
+    <div class="action-box hold" id="ab-${id}">스캔 대기 중...</div>
+    <div class="cd" id="dt-${id}" style="margin-top:6px">Waiting for scan...</div>
+  </div>`;
+}
+
+// Init
+document.getElementById('hld').innerHTML=HOLD.map(mkCard).join('');
+document.getElementById('cyc').innerHTML=CYCLE.map(mkCard).join('');
+document.getElementById('wtc').innerHTML=WATCH.map(mkCard).join('');
+window.addEventListener('load',()=>drawGauge(50));
+</script>
+</body>
+</html>
