@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🇰🇷 한국 핫섹터 트래커</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --card: rgba(255,255,255,0.05);
+    --tx: #e8edf3;
+    --dm: #5a6478;
+    --cy: #00e5cc;
+    --yl: #ffc107;
+    --rd: #ff4060;
+    --gn: #4caf50;
+    --bd: rgba(0,229,204,0.2);
+  }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--tx);
+    padding: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { color: var(--cy); margin-bottom: 8px; }
+  .meta { color: var(--dm); font-size: 13px; margin-bottom: 20px; }
+  .card {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 14px;
+    margin: 10px 0;
+    border: 1px solid var(--bd);
+  }
+  .etf {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 80px;
+    gap: 8px;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 13px;
+  }
+  .etf:hover { background: rgba(255,255,255,0.02); }
+  .etf-name { font-weight: 600; }
+  .etf-name .sector { color: var(--dm); font-size: 11px; }
+  .price { color: var(--tx); font-family: 'Consolas', monospace; }
+  .change-pos { color: var(--gn); }
+  .change-neg { color: var(--rd); }
+  .ema { font-size: 11px; color: var(--dm); }
+  .score-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .score-buy { background: var(--gn); color: #fff; }
+  .score-hold { background: var(--yl); color: #000; }
+  .score-sell { background: var(--rd); color: #fff; }
+  .score-watch { background: var(--dm); color: #fff; }
+  .header {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 80px;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(0,229,204,0.1);
+    color: var(--cy);
+    font-weight: 700;
+    font-size: 12px;
+    border-radius: 6px 6px 0 0;
+  }
+  .btn {
+    background: var(--cy);
+    color: var(--bg);
+    border: 0;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    margin: 4px;
+  }
+  .btn:hover { background: #00b8a3; }
+  .err {
+    background: rgba(255,64,96,0.1);
+    border: 1px solid var(--rd);
+    color: var(--rd);
+    padding: 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: var(--card);
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+    border: 1px solid var(--bd);
+  }
+  .stat-value { font-size: 20px; font-weight: 700; color: var(--cy); }
+  .stat-label { font-size: 11px; color: var(--dm); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>🇰🇷 한국 핫섹터 트래커</h1>
+<div class="meta" id="updateMeta">데이터 로딩 중...</div>
+
+<div class="summary">
+  <div class="stat"><div class="stat-value" id="statBuy">-</div><div class="stat-label">🟢 BUY</div></div>
+  <div class="stat"><div class="stat-value" id="statHold">-</div><div class="stat-label">🟡 HOLD</div></div>
+  <div class="stat"><div class="stat-value" id="statSell">-</div><div class="stat-label">🔴 SELL</div></div>
+  <div class="stat"><div class="stat-value" id="statTotal">-</div><div class="stat-label">전체</div></div>
+</div>
+
+<div class="card">
+  <div class="header">
+    <div>종목 / 섹터</div>
+    <div style="text-align:right">현재가</div>
+    <div style="text-align:right">EMA5/10/20</div>
+    <div style="text-align:right">RSI / 4주</div>
+    <div style="text-align:center">Score</div>
+    <div style="text-align:center">신호</div>
+  </div>
+  <div id="etfList"></div>
+</div>
+
+<div style="margin-top:16px;text-align:center;">
+  <button class="btn" onclick="loadData()">🔄 다시 불러오기</button>
+</div>
+
+<div class="card" style="margin-top:20px;font-size:12px;">
+  <strong style="color:var(--cy)">📋 시스템 룰</strong><br>
+  진입: 주봉 EMA20 정배열 + Score 5+ → 매주 토요일 결정 → 월요일 시초가 매수<br>
+  청산: 주봉 EMA20 이탈 → 다음주 시초가 매도<br>
+  비중: 6종 균등 (각 833만, 신용 5,000만 기준)<br>
+  세금: 양도세 0% (국내 주식형 ETF)<br><br>
+  
+  <strong style="color:var(--yl)">📅 데이터 갱신</strong><br>
+  매일 18:30 KST (한국장 마감 후) GitHub Actions로 자동 갱신<br>
+  데이터 출처: pykrx (KRX 공식)
+</div>
+
+<script>
+// ============== 유틸 함수 ==============
+
+function calcEMA(prices, period) {
+  if(prices.length < period) return [];
+  const k = 2 / (period + 1);
+  const ema = [];
+  // 초기값: 처음 period의 SMA
+  let sum = 0;
+  for(let i = 0; i < period; i++) sum += prices[i];
+  ema[period-1] = sum / period;
+  
+  for(let i = period; i < prices.length; i++){
+    ema[i] = prices[i] * k + ema[i-1] * (1-k);
+  }
+  return ema;
+}
+
+function calcRSI(prices, period = 14) {
+  if(prices.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for(let i = 1; i <= period; i++){
+    const diff = prices[i] - prices[i-1];
+    if(diff >= 0) gains += diff;
+    else losses -= diff;
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  
+  for(let i = period + 1; i < prices.length; i++){
+    const diff = prices[i] - prices[i-1];
+    const gain = diff > 0 ? diff : 0;
+    const loss = diff < 0 ? -diff : 0;
+    avgGain = (avgGain * (period-1) + gain) / period;
+    avgLoss = (avgLoss * (period-1) + loss) / period;
+  }
+  
+  if(avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
+}
+
+function calcMACD(prices) {
+  const ema12 = calcEMA(prices, 12);
+  const ema26 = calcEMA(prices, 26);
+  if(ema12.length === 0 || ema26.length === 0) return {macd: 0, hist: 0};
+  const lastIdx = prices.length - 1;
+  const macd = (ema12[lastIdx] || 0) - (ema26[lastIdx] || 0);
+  return {macd, hist: macd};
+}
+
+// 일봉 → 주봉 변환 (각 주의 마지막 거래일)
+function dailyToWeekly(candles) {
+  const weeks = [];
+  let currentWeek = null;
+  let currentWeekNum = -1;
+  
+  for(const c of candles){
+    const d = new Date(c.date);
+    // 주의 첫 날 (일요일) 기준
+    const day = d.getDay();
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - day);
+    const weekKey = weekStart.toISOString().substring(0,10);
+    
+    if(weekKey !== currentWeekNum){
+      if(currentWeek) weeks.push(currentWeek);
+      currentWeek = {
+        date: c.date,  // 주의 마지막 거래일로 갱신됨
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
+      };
+      currentWeekNum = weekKey;
+    } else {
+      // 같은 주 - 갱신
+      currentWeek.date = c.date;
+      currentWeek.high = Math.max(currentWeek.high, c.high);
+      currentWeek.low = Math.min(currentWeek.low, c.low);
+      currentWeek.close = c.close;
+      currentWeek.volume += c.volume;
+    }
+  }
+  if(currentWeek) weeks.push(currentWeek);
+  return weeks;
+}
+
+// 종목 분석
+function analyzeETF(candles) {
+  if(!candles || candles.length < 30) {
+    return {error: '데이터 부족'};
+  }
+  
+  // 주봉 변환
+  const weekly = dailyToWeekly(candles);
+  if(weekly.length < 25) {
+    return {error: '주봉 데이터 부족'};
+  }
+  
+  const closes = weekly.map(w => w.close);
+  const lastClose = closes[closes.length-1];
+  const prevClose = closes[closes.length-2];
+  
+  // EMA 계산
+  const ema5 = calcEMA(closes, 5);
+  const ema10 = calcEMA(closes, 10);
+  const ema20 = calcEMA(closes, 20);
+  
+  const e5 = ema5[ema5.length-1];
+  const e10 = ema10[ema10.length-1];
+  const e20 = ema20[ema20.length-1];
+  
+  // 정배열 체크
+  const aligned = e5 > e10 && e10 > e20 && lastClose > e5;
+  
+  // MACD
+  const macdData = calcMACD(closes);
+  const macdOk = macdData.macd > 0;
+  
+  // RSI
+  const rsi = calcRSI(closes, 14);
+  
+  // 4주 모멘텀
+  const mom4w = closes.length >= 5 
+    ? (lastClose - closes[closes.length-5]) / closes[closes.length-5]
+    : 0;
+  
+  // 1주 변동
+  const weekChange = prevClose ? (lastClose - prevClose) / prevClose : 0;
+  
+  // Score 계산
+  let score = 0;
+  if(lastClose > e5) score++;
+  if(e5 > e10) score++;
+  if(e10 > e20) score++;
+  if(lastClose > e20) score++;
+  if(macdOk) score++;
+  if(mom4w > 0) score++;
+  if(rsi && rsi < 70) score++;
+  
+  // 옵션1 - RSI 과열 차감
+  if(rsi >= 70) score -= 1;
+  
+  // 신호 판정
+  let signal = 'WATCH';
+  if(aligned && macdOk && score >= 5) signal = 'BUY';
+  else if(aligned && score >= 4) signal = 'HOLD';
+  else if(!aligned && lastClose < e10) signal = 'SELL';
+  
+  return {
+    price: lastClose,
+    prevPrice: prevClose,
+    change: weekChange,
+    e5, e10, e20,
+    rsi, mom4w, weekChange,
+    aligned, macdOk, score,
+    signal,
+  };
+}
+
+function fmtPrice(p) {
+  return Math.round(p).toLocaleString();
+}
+
+function fmtPct(p) {
+  const cls = p >= 0 ? 'change-pos' : 'change-neg';
+  const sign = p >= 0 ? '+' : '';
+  return `<span class="${cls}">${sign}${(p*100).toFixed(2)}%</span>`;
+}
+
+// ============== 메인 로직 ==============
+
+async function loadData() {
+  document.getElementById('updateMeta').textContent = '데이터 로딩 중...';
+  document.getElementById('etfList').innerHTML = '<div style="padding:20px;text-align:center;">⏳ 로딩 중...</div>';
+  
+  try {
+    // 같은 도메인이라 CORS 없음
+    const res = await fetch('data/korea-etf.json?t=' + Date.now());
+    if(!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    
+    document.getElementById('updateMeta').innerHTML = 
+      `📅 마지막 갱신: <strong>${data.updated_at_kst || data.updated_at}</strong>`;
+    
+    const html = [];
+    let buyCount = 0, holdCount = 0, sellCount = 0;
+    
+    for(const [code, etf] of Object.entries(data.etfs)){
+      if(etf.error || !etf.candles || etf.candles.length === 0){
+        html.push(`<div class="etf">
+          <div class="etf-name">${etf.name}<br><span class="sector">${etf.sector}</span></div>
+          <div colspan="5" style="grid-column:span 5;color:var(--rd);">❌ ${etf.error || '데이터 없음'}</div>
+        </div>`);
+        continue;
+      }
+      
+      const result = analyzeETF(etf.candles);
+      if(result.error){
+        html.push(`<div class="etf">
+          <div class="etf-name">${etf.name}<br><span class="sector">${etf.sector}</span></div>
+          <div style="grid-column:span 5;color:var(--yl);">⚠️ ${result.error}</div>
+        </div>`);
+        continue;
+      }
+      
+      // 신호 카운트
+      if(result.signal === 'BUY') buyCount++;
+      else if(result.signal === 'HOLD') holdCount++;
+      else if(result.signal === 'SELL') sellCount++;
+      
+      const signalClass = {
+        'BUY': 'score-buy',
+        'HOLD': 'score-hold',
+        'SELL': 'score-sell',
+        'WATCH': 'score-watch',
+      }[result.signal];
+      
+      const signalIcon = {
+        'BUY': '🟢',
+        'HOLD': '🟡',
+        'SELL': '🔴',
+        'WATCH': '⚪',
+      }[result.signal];
+      
+      html.push(`<div class="etf">
+        <div class="etf-name">${etf.name}<br><span class="sector">${etf.sector} · ${code}</span></div>
+        <div style="text-align:right">
+          <div class="price">${fmtPrice(result.price)}원</div>
+          <div style="font-size:11px">${fmtPct(result.change)}</div>
+        </div>
+        <div style="text-align:right" class="ema">
+          ${fmtPrice(result.e5)}<br>
+          ${fmtPrice(result.e10)}<br>
+          ${fmtPrice(result.e20)}
+        </div>
+        <div style="text-align:right;font-size:11px;">
+          RSI: ${result.rsi ? result.rsi.toFixed(0) : '-'}<br>
+          4주: ${fmtPct(result.mom4w)}
+        </div>
+        <div style="text-align:center">
+          <span class="score-badge ${signalClass}">${result.score}/7</span>
+        </div>
+        <div style="text-align:center">
+          ${signalIcon} ${result.signal}
+        </div>
+      </div>`);
+    }
+    
+    document.getElementById('etfList').innerHTML = html.join('');
+    document.getElementById('statBuy').textContent = buyCount;
+    document.getElementById('statHold').textContent = holdCount;
+    document.getElementById('statSell').textContent = sellCount;
+    document.getElementById('statTotal').textContent = Object.keys(data.etfs).length;
+    
+  } catch(e) {
+    document.getElementById('updateMeta').innerHTML = `<span style="color:var(--rd)">❌ ${e.message}</span>`;
+    document.getElementById('etfList').innerHTML = `
+      <div class="err">
+        ❌ 데이터 로딩 실패: ${e.message}<br><br>
+        가능한 원인:<br>
+        1. data/korea-etf.json 파일이 아직 없음 (GitHub Actions 미실행)<br>
+        2. GitHub Actions에서 한 번이라도 수동 실행 필요<br><br>
+        <strong>해결:</strong><br>
+        GitHub 레포 → Actions 탭 → "Fetch Korea ETF Data" → "Run workflow" 클릭
+      </div>
+    `;
+  }
+}
+
+// 페이지 로드 시 자동 실행
+window.addEventListener('load', loadData);
+</script>
+
+</body>
+</html>
