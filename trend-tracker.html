@@ -186,6 +186,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
           <input type="checkbox" id="hold-TQQQ" onchange="saveHoldings()"> TQQQ
         </label>
         <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="hold-SOXL" onchange="saveHoldings()"> SOXL
+        </label>
+        <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
           <input type="checkbox" id="hold-NUGT" onchange="saveHoldings()"> NUGT
         </label>
         <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
@@ -193,6 +196,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         </label>
         <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
           <input type="checkbox" id="hold-URAA" onchange="saveHoldings()"> URAA
+        </label>
+        <label style="font-size:.65rem;color:var(--dm);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="hold-FAS" onchange="saveHoldings()"> FAS
         </label>
       </div>
       <button class="btn" id="btnDaily" onclick="scanDaily()" style="background:linear-gradient(135deg,var(--rd),#cc3050);color:#fff;font-size:.75rem;padding:10px">
@@ -270,36 +276,43 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
   <!-- Trading Rules -->
   <div style="margin-top:20px">
-    <div class="slbl">MY TRADING RULES</div>
+    <div class="slbl">CONFIRMED STRATEGY (옵션1 · 백테스팅 검증)</div>
     <div class="c">
+      <div style="font-size:.6rem;color:var(--cy);letter-spacing:1.5px;margin-bottom:10px;font-family:'Space Mono',monospace;">
+        18Y CAGR +26.5% / MDD -9.8% / RAR 2.72 (32개 조합 중 1위)
+      </div>
       <div class="rules-grid">
         <div class="rule-item">
-          <div class="rule-num">①</div>
-          <div class="rule-text"><strong>시장 필터</strong> — S&P500 EMA20 위일 때만 신규 매수. 아래면 매수 중단, 2주 연속 아래면 포지션 50% 축소</div>
+          <div class="rule-num" style="color:var(--gn)">①</div>
+          <div class="rule-text"><strong style="color:var(--gn)">RSI 과열 페널티</strong> — RSI 70↑ 시 비중 -7%, 55~70 시 -3%. 고점 추격 방지</div>
         </div>
         <div class="rule-item">
-          <div class="rule-num">②</div>
-          <div class="rule-text"><strong>9점 시스템</strong> — EMA 7조건 + 섹터 정배열 +1 + S&P500 정배열 +1. 7점 이상만 매수, 4점 이하 매도</div>
+          <div class="rule-num" style="color:var(--gn)">②</div>
+          <div class="rule-text"><strong style="color:var(--gn)">변동성 역가중</strong> — ATR% 4↑ -2%, 6↑ -5%, 2↓ +2%. 안정 종목 집중</div>
         </div>
         <div class="rule-item">
-          <div class="rule-num">③</div>
-          <div class="rule-text"><strong>피라미딩</strong> — 1차 40% 진입 → +5% 상승 시 35% 추가 → +10% 시 25% 추가. 오를수록 더 태우기</div>
+          <div class="rule-num" style="color:var(--gn)">③</div>
+          <div class="rule-text"><strong style="color:var(--gn)">강한 추세 필터</strong> — 4주 모멘텀 양수일 때만 매수. 가짜 반등 차단</div>
         </div>
         <div class="rule-item">
-          <div class="rule-num">④</div>
-          <div class="rule-text"><strong>트레일링 스탑</strong> — 수익 +10%: 고점-15% / +30%: 고점-12% / +50%: 고점-10%. EMA20 이탈 시 무조건 청산</div>
+          <div class="rule-num" style="color:var(--gn)">④</div>
+          <div class="rule-text"><strong style="color:var(--gn)">휩소 방지</strong> — SELL 후 14일 내 같은 종목 재진입 금지. 노이즈 청산</div>
+        </div>
+        <div class="rule-item" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:10px;">
+          <div class="rule-num" style="color:var(--cy)">⑤</div>
+          <div class="rule-text"><strong style="color:var(--cy)">매주 운영</strong> — 1배 ETF 14개 주봉 신호 확인 → 비중 추천 따라 리밸런싱</div>
         </div>
         <div class="rule-item">
-          <div class="rule-num">⑤</div>
-          <div class="rule-text"><strong>변동성 사이징</strong> — ATR 2% 이하: 최대 25% / 2~4%: 최대 15% / 4% 이상: 최대 8%</div>
+          <div class="rule-num" style="color:var(--rd)">⑥</div>
+          <div class="rule-text"><strong style="color:var(--rd)">매일 운영</strong> — 보유 3배 ETF 일봉 EMA10 이탈 시 다음날 시초가 청산</div>
         </div>
         <div class="rule-item">
-          <div class="rule-num">⑥</div>
-          <div class="rule-text"><strong>섹터 로테이션</strong> — 격주 토요일: 점수 하위 1개 축소 → 점수 상위 관찰 종목으로 교체</div>
+          <div class="rule-num" style="color:var(--yl)">⑦</div>
+          <div class="rule-text"><strong style="color:var(--yl)">3배 진입 조건</strong> — 정배열 + MACD 양수 + 점수 5↑ 모두 충족 시 20% 비중</div>
         </div>
         <div class="rule-item">
-          <div class="rule-num">⑦</div>
-          <div class="rule-text"><strong>어닝 규칙</strong> — 실적 3일 전 신규 진입 금지. 어닝 서프라이즈 + 정배열 유지 시 불타기. 실망 + EMA 이탈 시 즉시 청산</div>
+          <div class="rule-num" style="color:var(--pu)">⑧</div>
+          <div class="rule-text"><strong style="color:var(--pu)">드로다운 옵션</strong> — QQQ -25/-35/-45 시 30/60/100% 분할 진입 (선택, 비추천)</div>
         </div>
       </div>
     </div>
@@ -336,18 +349,19 @@ const CYCLE = [
   {t:'REMX', n:'희토류',     cat:'cycle', kr:null}, // 직투 (한국 미상장)
 ];
 
-// 워치리스트 (2개) - 모두 직투
+// 워치리스트 (1개) - 직투
 const WATCH = [
   {t:'XLF',  n:'Financials', kr:null}, // 직투 (한국 금융 ≠ 미국 금융)
-  {t:'FNGS', n:'FANG+',      kr:null}, // 직투 (커버드콜 다름)
 ];
 
 // 3배 ETF는 모두 직투 (한국 미상장)
 const LEV_KR = {
-  'TQQQ': null, // 직투 (TIGER 나스닥100 레버리지 2배는 있음 - 233740)
-  'NUGT': null, // 직투
-  'LABU': null, // 직투
-  'URAA': null, // 직투
+  'TQQQ': null, // 나스닥100 3배
+  'SOXL': null, // 반도체 3배 (SMH 짝)
+  'NUGT': null, // 금광 2배 (GDX 짝)
+  'LABU': null, // 바이오 3배 (IBB 짝)
+  'URAA': null, // 우라늄 2배 (URA 짝)
+  'FAS':  null, // 금융 3배 (XLF 짝)
 };
 
 // Global scan results & SPY state
@@ -506,6 +520,9 @@ async function scanOne(ticker) {
     const macd=calcMACD(closes);
     const atrPct=calcATR(closes);
 
+    // 4주 모멘텀 (강한 추세 필터용) - 4주 전 대비 현재 수익률
+    const mom4w = closes.length >= 5 ? ((price - closes[closes.length-5]) / closes[closes.length-5]) : 0;
+
     // 52주 신고가 대비 드로다운 (드로다운 트리거용)
     const last52 = closes.slice(-52);
     const high52 = Math.max(...last52);
@@ -560,13 +577,13 @@ async function scanOne(ticker) {
 
     return {
       price, change, rsi, ema5, ema10, ema20, aligned, macd,
-      atrPct, score, signal, maxPos, pyramid, trailStop, detail, drawdownPct, high52
+      atrPct, score, signal, maxPos, pyramid, trailStop, detail, drawdownPct, high52, mom4w
     };
   } catch(e) {
     return {
       price:null,change:null,rsi:null,ema5:null,ema10:null,ema20:null,
       aligned:false,macd:null,atrPct:null,score:0,signal:'ERR',
-      maxPos:0,pyramid:'--',trailStop:'--',detail:'Error: '+e.message
+      maxPos:0,pyramid:'--',trailStop:'--',detail:'Error: '+e.message, mom4w:0
     };
   }
 }
@@ -748,9 +765,10 @@ function getDrawdownStage(){
   const qqq = SCAN_RESULTS['QQQ'];
   if(!qqq || !qqq.drawdownPct) return 0;
   const dd = qqq.drawdownPct;
-  if(dd <= -40) return 3; // -40% → QQQ 100%
-  if(dd <= -30) return 2; // -30% → QQQ 60%
-  if(dd <= -20) return 1; // -20% → QQQ 30%
+  // 백테스팅과 동일: -25/-35/-45 (이전 -20/-30/-40에서 조정)
+  if(dd <= -45) return 3; // -45% → QQQ 100%
+  if(dd <= -35) return 2; // -35% → QQQ 60%
+  if(dd <= -25) return 1; // -25% → QQQ 30%
   return 0;
 }
 
@@ -768,8 +786,8 @@ function buildPortfolio() {
   const waits=results.filter(([t,d])=>d.signal==='WAIT');
   const sells=results.filter(([t,d])=>d.signal==='SELL');
 
-  // 3배 레버리지 페어
-  const LEV3X={'QQQ':'TQQQ','GDX':'NUGT','IBB':'LABU','URA':'URAA'};
+  // 3배 레버리지 페어 (백테스팅 index.html LEV3X와 100% 일치)
+  const LEV3X={'QQQ':'TQQQ','SMH':'SOXL','GDX':'NUGT','IBB':'LABU','URA':'URAA','XLF':'FAS'};
 
   const buyScored=buys.map(([t,d])=>{
     let q=d.score||0;
@@ -782,7 +800,54 @@ function buildPortfolio() {
     }
     if (d.signal==='STRONG') q+=2;
     return {ticker:t,data:d,quality:q};
-  }).sort((a,b)=>b.quality-a.quality);
+  })
+  // ✅ 옵션1: 강한 추세 필터 - 4주 모멘텀 양수일 때만 매수
+  .filter(item => (item.data.mom4w ?? 0) > 0)
+  .sort((a,b)=>b.quality-a.quality);
+
+  // ✅ 옵션1: 휩소 방지 - 최근 2주 내 SELL 신호 발생 종목 매수 제외
+  // SELL 신호 종목 추적 (localStorage)
+  const exitKey = 'recent_exits_v2';
+  let recentExits = {};
+  try{
+    recentExits = JSON.parse(localStorage.getItem(exitKey) || '{}');
+  }catch(e){ recentExits = {}; }
+
+  const now = Date.now();
+  const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
+
+  // 현재 SELL 신호 종목 기록 (오늘 날짜로)
+  sells.forEach(([t,d]) => {
+    recentExits[t] = now;
+  });
+
+  // 만료된 기록 제거 (2주 지난 것)
+  Object.keys(recentExits).forEach(t => {
+    if(now - recentExits[t] > TWO_WEEKS) delete recentExits[t];
+  });
+  localStorage.setItem(exitKey, JSON.stringify(recentExits));
+
+  // buyScored에서 휩소 종목 필터링
+  const buyScoredFiltered = buyScored.filter(item => {
+    const exitTime = recentExits[item.ticker];
+    if(!exitTime) return true;
+    const daysSince = (now - exitTime) / (24*60*60*1000);
+    if(daysSince <= 14){
+      item.whipsawBlocked = Math.ceil(14 - daysSince); // 며칠 더 기다려야 하는지
+      return false;
+    }
+    return true;
+  });
+  // 휩소 차단된 종목 (사용자에게 표시용)
+  const whipsawBlocked = buyScored.filter(item => {
+    const exitTime = recentExits[item.ticker];
+    if(!exitTime) return false;
+    const daysSince = (now - exitTime) / (24*60*60*1000);
+    return daysSince <= 14;
+  });
+
+  // 이후 로직은 buyScoredFiltered 사용
+  const buyScoredFinal = buyScoredFiltered;
 
   // ── 백테스팅 100% 일치: 동적 비중 (확정 옵션 ON) ──
   // 기본 비중 + RSI 과열 페널티 + 변동성 역가중
@@ -790,7 +855,7 @@ function buildPortfolio() {
   const allocs=[];
   let cumInvested = 0;
 
-  buyScored.forEach((item,i)=>{
+  buyScoredFinal.forEach((item,i)=>{
     let w=weights[i]||5;
     const d=item.data;
 
@@ -825,7 +890,8 @@ function buildPortfolio() {
   let availForLev = Math.max(0, 100 - totalBuy1x - 5); // 현금 5% 최소 보장
 
   // 백테스팅과 동일하게 LEV3X 매핑된 종목만, score 순으로
-  const levCandidates = buyScored.filter(item => {
+  // (이미 휩소+강한추세 필터링된 buyScoredFinal 풀 사용)
+  const levCandidates = buyScoredFinal.filter(item => {
     const lev = LEV3X[item.ticker];
     if(!lev) return false;
     // 백테스팅 조건: aligned + macdOk + score>=5
@@ -902,6 +968,33 @@ function buildPortfolio() {
       <td style="color:var(--dm);font-size:.65rem">--</td>
       <td style="color:var(--dm);font-size:.55rem">--</td>
     </tr>`;
+  });
+
+  // 휩소 차단 (BUY 신호지만 14일 내 SELL 했던 종목)
+  whipsawBlocked.forEach(item => {
+    const remain = Math.ceil(14 - (now - recentExits[item.ticker]) / (24*60*60*1000));
+    html+=`<tr style="opacity:.5;background:rgba(255,193,7,.04)">
+      <td style="font-family:'DM Mono',monospace;color:var(--yl)">${item.ticker}</td>
+      <td style="font-size:.62rem;color:var(--yl)">${item.data.name}</td>
+      <td><span style="background:rgba(255,193,7,.15);color:var(--yl);padding:2px 6px;border-radius:3px;font-size:.55rem">🚫 휩소</span></td>
+      <td style="color:var(--yl)">0%</td>
+      <td style="color:var(--yl);font-size:.6rem">${remain}일 대기</td>
+      <td style="color:var(--dm);font-size:.55rem">--</td>
+    </tr>`;
+  });
+
+  // 강한 추세 차단 (BUY 신호지만 4주 모멘텀 음수)
+  buys.forEach(([t,d]) => {
+    if((d.mom4w ?? 0) <= 0){
+      html+=`<tr style="opacity:.5;background:rgba(181,123,238,.04)">
+        <td style="font-family:'DM Mono',monospace;color:var(--pu)">${t}</td>
+        <td style="font-size:.62rem;color:var(--pu)">${d.name}</td>
+        <td><span style="background:rgba(181,123,238,.15);color:var(--pu);padding:2px 6px;border-radius:3px;font-size:.55rem">🚫 추세약</span></td>
+        <td style="color:var(--pu)">0%</td>
+        <td style="color:var(--pu);font-size:.6rem">${(d.mom4w*100).toFixed(1)}%</td>
+        <td style="color:var(--dm);font-size:.55rem">--</td>
+      </tr>`;
+    }
   });
 
   const cashAmount = (cash * 100).toFixed(0);
@@ -1009,7 +1102,7 @@ function buildPortfolio() {
 function buildDrawdownPortfolio(stage){
   const qqq = SCAN_RESULTS['QQQ'];
   const dd = qqq.drawdownPct.toFixed(1);
-  const stageLabels = {1:'-20% 트리거', 2:'-30% 트리거', 3:'-40% 트리거'};
+  const stageLabels = {1:'-25% 트리거', 2:'-35% 트리거', 3:'-45% 트리거'};
   const qqqWeights = {1:30, 2:60, 3:100};
   const qqqW = qqqWeights[stage];
   const cashW = 100 - qqqW;
@@ -1086,9 +1179,12 @@ function buildDrawdownPortfolio(stage){
 
 // ── 3배 일봉 모니터 ──
 
+// 모니터링 가능한 3배 ETF 목록 (LEV3X 매핑과 일치: 6개)
+const LEV3_TICKERS = ['TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+
 // 보유 종목 저장/복원
 function saveHoldings(){
-  const holdings = ['TQQQ','NUGT','LABU','URAA'].filter(t =>
+  const holdings = LEV3_TICKERS.filter(t =>
     document.getElementById('hold-'+t)?.checked
   );
   localStorage.setItem('held_3x_tickers', JSON.stringify(holdings));
@@ -1108,7 +1204,7 @@ function loadHoldings(){
 
 // 매일 일봉 EMA10 체크
 async function scanDaily(){
-  const tickers = ['TQQQ','NUGT','LABU','URAA'].filter(t =>
+  const tickers = LEV3_TICKERS.filter(t =>
     document.getElementById('hold-'+t)?.checked
   );
 
