@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>📔 Trade Journal v2 · 옵션1 운영</title>
+<title>📔 Trade Journal v2 · B+DD 운영</title>
 <style>
 :root{
   --bg:#0a0e15;--s1:#0f141d;--s2:#161d2a;--bd:rgba(255,255,255,.08);
@@ -127,8 +127,17 @@ canvas{width:100%!important;height:200px!important;background:var(--s2);border-r
 <body>
 <div class="wrap">
 
-<h1>📔 Trade Journal <span class="badge">v2</span> <span class="badge gn">옵션1</span></h1>
-<div class="sub">백테스팅 검증 ★옵션1+레버리지 (CAGR 26.5%, MDD -9.8%, RAR 2.72)</div>
+<h1>📔 Trade Journal <span class="badge">v2</span> <span class="badge gn">B+DD</span></h1>
+<div class="sub">★★ B + DD 운영 (CAGR 23.8%, MDD -15.9%, RAR 1.49 · 18년 검증)</div>
+
+<!-- BDD 시스템 운영 룰 요약 -->
+<div style="margin:8px 0 16px 0;padding:10px;background:linear-gradient(135deg,rgba(255,64,96,.06),rgba(0,229,204,.06));border-radius:6px;border:1px solid rgba(255,64,96,.25);font-size:.72rem;line-height:1.6;color:var(--tx);">
+  <div style="color:var(--rd);font-weight:700;margin-bottom:4px;">⭐⭐ B + DD 시스템</div>
+  <strong>매일:</strong> 3배 ETF 일봉 EMA10 체크 (B 모드) + QQQ DD 체크<br>
+  <strong>매주 토:</strong> 1배 풀스캔 → score 5+ TOP 5 균등<br>
+  <strong>DD:</strong> QQQ -25/-35/-45% → QQQ 30/60/100% 분할 매수<br>
+  <strong>비중:</strong> 3배 max 20%/종목, 1배 5종 균등
+</div>
 
 <div class="dday">
   <div class="dday-label">7개월 테스트</div>
@@ -335,10 +344,33 @@ canvas{width:100%!important;height:200px!important;background:var(--s2);border-r
   </div>
 
   <div class="card">
+    <div class="card-title yl">💵 입금 / 출금 기록 (수익률 정확 계산용)</div>
+    <div class="note" style="margin-bottom:10px;color:var(--tx);">
+      투자금을 추가로 입금하거나 출금하면 여기에 기록하세요. 그래야 누적 수익률이 입금/출금을 빼고 순수한 시장 수익만 계산합니다.
+    </div>
+    <div class="form-row">
+      <div><label>날짜</label><input type="date" id="cfDate"></div>
+      <div>
+        <label>구분</label>
+        <select id="cfType">
+          <option value="deposit">💰 입금 (추가 투자)</option>
+          <option value="withdraw">💸 출금 (회수)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div><label>금액 (원)</label><input type="number" id="cfAmount" placeholder="10000000" step="10000"></div>
+      <div><label>메모</label><input type="text" id="cfNote" placeholder="예: 적금 만기"></div>
+    </div>
+    <button class="btn btn-sec" onclick="addCashflow()">💾 입금/출금 기록</button>
+    <div id="cashflowList" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
     <div class="card-title">📤 데이터 백업</div>
     <div class="btn-row">
       <button class="btn btn-sec" onclick="exportData()">📥 JSON 내보내기</button>
-      <button class="btn btn-sec" onclick="document.getElementById('importFile').click()">📤 불러오기</button>
+      <button class="btn btn-sec" onclick="document.getElementById('importFile').click()">📤 JSON 불러오기</button>
     </div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
     <div class="note warn">⚠️ 브라우저 캐시 삭제 시 데이터 사라짐 · 매주 1회 백업 권장</div>
@@ -414,6 +446,7 @@ function migrate(d){
     valuations: d.valuations || [],
     weekly: d.weekly || [],
     targetWeights: d.targetWeights || {},
+    cashflows: d.cashflows || [],
   };
 }
 
@@ -431,7 +464,7 @@ document.querySelectorAll('.tab').forEach(btn => {
     if(name==='holdings'){ renderHoldings(); }
     if(name==='list'){ renderTrades(); }
     if(name==='weekly'){ renderWeekly(); }
-    if(name==='settings'){ renderTargetWeights(); }
+    if(name==='settings'){ renderTargetWeights(); renderCashflows(); }
   });
 });
 
@@ -665,12 +698,23 @@ function refreshStats(){
   const fund = DATA.settings.fund || 0;
   const lastVal = DATA.valuations[DATA.valuations.length-1];
   const current = lastVal ? lastVal.total : fund;
-  const pct = fund ? ((current - fund) / fund * 100) : 0;
+
+  // 누적 입금/출금 합계
+  const netCashflow = (DATA.cashflows || []).reduce((sum, cf) => {
+    return sum + (cf.type === 'deposit' ? cf.amount : -cf.amount);
+  }, 0);
+
+  // 수익률 = (현재 평가액 - 시작 자금 - 순입금) / (시작 자금 + 순입금) × 100
+  // 순입금은 입금만큼 평가액이 늘어났을 거라 수익률 계산에서 제외해야 함
+  const investedCapital = fund + netCashflow;
+  const realProfit = current - investedCapital;
+  const pct = investedCapital ? (realProfit / investedCapital * 100) : 0;
 
   document.getElementById('statStart').textContent = fund ? formatWon(fund) : '--';
+  // 현재 평가액 표시 (입금 포함)
   document.getElementById('statCurrent').textContent = current ? formatWon(current) : '--';
   const retEl = document.getElementById('statReturn');
-  retEl.textContent = fund ? `${pct>=0?'+':''}${pct.toFixed(1)}%` : '--';
+  retEl.textContent = investedCapital ? `${pct>=0?'+':''}${pct.toFixed(1)}%` : '--';
   retEl.className = 'stat-v ' + (pct>=0 ? 'gn' : 'rd');
 
   const hold = computeHoldings();
@@ -687,6 +731,55 @@ function refreshStats(){
   document.getElementById('statExt').textContent = totalHoldValue ? `${(extValue/totalHoldValue*100).toFixed(0)}%` : '--';
 
   refreshDday();
+}
+
+// 입금/출금 추가
+function addCashflow(){
+  const cf = {
+    id: Date.now(),
+    date: document.getElementById('cfDate').value,
+    type: document.getElementById('cfType').value,
+    amount: parseFloat(document.getElementById('cfAmount').value) || 0,
+    note: document.getElementById('cfNote').value.trim(),
+  };
+  if(!cf.date || !cf.amount){ alert('날짜·금액 필수'); return; }
+  if(!DATA.cashflows) DATA.cashflows = [];
+  DATA.cashflows.push(cf);
+  DATA.cashflows.sort((a,b) => a.date.localeCompare(b.date));
+  saveData(DATA);
+  document.getElementById('cfAmount').value = '';
+  document.getElementById('cfNote').value = '';
+  alert(`✅ ${cf.type === 'deposit' ? '입금' : '출금'} ${formatWon(cf.amount)} 기록`);
+  refreshStats();
+  renderCashflows();
+}
+
+function deleteCashflow(id){
+  if(!confirm('입금/출금 기록 삭제?')) return;
+  DATA.cashflows = (DATA.cashflows || []).filter(cf => cf.id !== id);
+  saveData(DATA);
+  refreshStats();
+  renderCashflows();
+}
+
+function renderCashflows(){
+  const cont = document.getElementById('cashflowList');
+  if(!cont) return;
+  if(!DATA.cashflows || !DATA.cashflows.length){
+    cont.innerHTML = '<div class="note">입금/출금 기록 없음</div>';
+    return;
+  }
+  const sorted = [...DATA.cashflows].sort((a,b) => b.date.localeCompare(a.date));
+  cont.innerHTML = sorted.map(cf => {
+    const icon = cf.type === 'deposit' ? '💰' : '💸';
+    const color = cf.type === 'deposit' ? 'var(--gn)' : 'var(--rd)';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--s2);border-radius:4px;margin-bottom:4px;font-size:.7rem;">
+      <span style="color:var(--dm);font-family:'Space Mono',monospace;">${cf.date}</span>
+      <span>${icon} <span style="color:${color};font-family:'Space Mono',monospace;font-weight:600;">${formatWon(cf.amount)}</span></span>
+      <span style="color:var(--tx);font-size:.65rem;flex:1;text-align:right;margin-left:8px;">${cf.note || ''}</span>
+      <button onclick="deleteCashflow(${cf.id})" style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:.65rem;opacity:.5;margin-left:6px;">✕</button>
+    </div>`;
+  }).join('');
 }
 
 function refreshDday(){
@@ -892,24 +985,44 @@ function drawEquity(){
 
   const vals = DATA.valuations.map(v => v.total);
   const fund = DATA.settings.fund || vals[0];
-  const min = Math.min(fund * 0.85, ...vals);
-  const max = Math.max(fund * 1.3, ...vals);
+  const cashflows = DATA.cashflows || [];
+
+  // 각 평가액 시점의 누적 입금 (그 시점까지의 입금/출금 합)
+  const adjustedFunds = DATA.valuations.map(v => {
+    const netCf = cashflows.filter(cf => cf.date <= v.date).reduce((s, cf) => {
+      return s + (cf.type === 'deposit' ? cf.amount : -cf.amount);
+    }, 0);
+    return fund + netCf;
+  });
+
+  const allVals = [...vals, ...adjustedFunds];
+  const min = Math.min(fund * 0.85, ...allVals);
+  const max = Math.max(fund * 1.3, ...allVals);
   const range = max - min || 1;
   const pad = 40;
 
-  const baseY = H - pad - ((fund - min) / range) * (H - pad*2);
-  ctx.strokeStyle = '#5a6478';
+  // 기준선 (시작 자금 + 누적 입금) - 점선
+  ctx.strokeStyle = '#ffc107';
   ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(pad, baseY);
-  ctx.lineTo(W - pad, baseY);
+  adjustedFunds.forEach((af, i) => {
+    const x = pad + (i / (adjustedFunds.length-1)) * (W - pad*2);
+    const y = H - pad - ((af - min) / range) * (H - pad*2);
+    if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = '#5a6478';
+
+  // 라벨
+  const lastAdjFund = adjustedFunds[adjustedFunds.length-1];
+  const lastAdjY = H - pad - ((lastAdjFund - min) / range) * (H - pad*2);
+  ctx.fillStyle = '#ffc107';
   ctx.font = '10px monospace';
   ctx.textAlign = 'right';
-  ctx.fillText(formatWon(fund), W - pad - 4, baseY - 3);
+  ctx.fillText(`투자원금 ${formatWon(lastAdjFund)}`, W - pad - 4, lastAdjY - 3);
 
+  // 자산 곡선 (실제 평가액)
   ctx.strokeStyle = '#00e5cc';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -920,19 +1033,52 @@ function drawEquity(){
   });
   ctx.stroke();
 
+  // 점 (수익/손실 색상)
   vals.forEach((v, i) => {
     const x = pad + (i / (vals.length-1)) * (W - pad*2);
     const y = H - pad - ((v - min) / range) * (H - pad*2);
-    ctx.fillStyle = v >= fund ? '#52d27a' : '#ff4060';
+    ctx.fillStyle = v >= adjustedFunds[i] ? '#52d27a' : '#ff4060';
     ctx.beginPath();
     ctx.arc(x, y, 3, 0, Math.PI*2);
     ctx.fill();
   });
 
+  // 입금/출금 시점 마커 (수직선)
+  cashflows.forEach(cf => {
+    // 평가액 날짜 사이에서 위치 계산
+    const cfDate = cf.date;
+    let pos = -1;
+    for(let i = 0; i < DATA.valuations.length - 1; i++){
+      if(DATA.valuations[i].date <= cfDate && cfDate <= DATA.valuations[i+1].date){
+        const range_local = new Date(DATA.valuations[i+1].date) - new Date(DATA.valuations[i].date);
+        const offset = new Date(cfDate) - new Date(DATA.valuations[i].date);
+        pos = i + (range_local ? offset/range_local : 0);
+        break;
+      }
+    }
+    if(pos < 0) return;
+    const x = pad + (pos / (DATA.valuations.length-1)) * (W - pad*2);
+    ctx.strokeStyle = cf.type === 'deposit' ? 'rgba(82,210,122,0.4)' : 'rgba(255,64,96,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, pad);
+    ctx.lineTo(x, H - pad);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 마커 라벨
+    ctx.fillStyle = cf.type === 'deposit' ? '#52d27a' : '#ff4060';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(cf.type === 'deposit' ? '+' : '-', x, pad - 4);
+  });
+
+  // 마지막 평가액 라벨
   const lastVal = vals[vals.length-1];
   const lastX = W - pad;
   const lastY = H - pad - ((lastVal - min) / range) * (H - pad*2);
-  ctx.fillStyle = lastVal >= fund ? '#52d27a' : '#ff4060';
+  ctx.fillStyle = lastVal >= lastAdjFund ? '#52d27a' : '#ff4060';
   ctx.font = 'bold 11px monospace';
   ctx.textAlign = 'right';
   ctx.fillText(formatWon(lastVal), lastX - 4, lastY - 6);
@@ -940,7 +1086,7 @@ function drawEquity(){
 
 function init(){
   const today = new Date().toISOString().slice(0,10);
-  ['tDate','vDate','wDate'].forEach(id => {
+  ['tDate','vDate','wDate','cfDate'].forEach(id => {
     const el = document.getElementById(id);
     if(el && !el.value) el.value = today;
   });

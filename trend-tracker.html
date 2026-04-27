@@ -140,9 +140,18 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="hdr">
     <div>
       <h1>TREND TRACKER <span style="color:var(--pu);font-size:.65rem">PRO</span></h1>
-      <div class="sub">메인 7 + 사이클 5 · 🇰🇷 ISA 가능 / 🇺🇸 직투 표시 · 동적비중</div>
+      <div class="sub">★★ B + DD 운영 시스템 · CAGR 23.8% · MDD -16% · 검증완료</div>
     </div>
     <div><div class="tm" id="tm">--</div></div>
+  </div>
+
+  <!-- BDD 운영 가이드 -->
+  <div style="margin:0 0 12px 0;padding:10px;background:linear-gradient(135deg,rgba(255,64,96,.06),rgba(0,229,204,.06));border-radius:6px;border:1px solid rgba(255,64,96,.3);font-size:.7rem;color:var(--tx);line-height:1.6;">
+    <div style="color:var(--rd);font-weight:700;margin-bottom:4px;">⭐⭐ B + DD 시스템 운영 룰</div>
+    <strong>매일 (5분):</strong> 3배 ETF 일봉 EMA10 체크 + QQQ 드로다운 -25/-35/-45% 체크<br>
+    <strong>매주 토요일 (15분):</strong> 1배 풀스캔 → score 5+ TOP 5 균등 매수<br>
+    <strong>비중:</strong> 3배 종목당 max 20% · 1배 5종 균등 (각 약 13~15%)<br>
+    <strong>DD 발동:</strong> QQQ -25%→QQQ 30% 매수 · -35%→60% · -45%→100%
   </div>
 
   <!-- Market Filter Banner -->
@@ -160,6 +169,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <div class="sp"></div>
       <span>SCAN ALL STOCKS</span>
     </button>
+  </div>
+
+  <!-- 캐시 상태 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:6px 10px;background:rgba(0,229,204,.04);border:1px solid rgba(0,229,204,.15);border-radius:6px;">
+    <div id="cacheStatus" style="font-size:.6rem;color:var(--dm);font-family:'Space Mono',monospace;">캐시 확인 중...</div>
+    <button onclick="if(confirm('캐시 삭제 후 다음 스캔은 실시간 데이터를 받습니다.\n계속할까요?')){clearTSCache();updateCacheStatus();alert('캐시 삭제 완료');}" style="background:rgba(255,64,96,.1);color:var(--rd);border:1px solid rgba(255,64,96,.3);padding:4px 10px;border-radius:4px;font-size:.6rem;cursor:pointer;font-family:'Space Mono',monospace;">🗑️ 캐시 삭제</button>
   </div>
 
   <div class="pbar" id="pb"><i id="pbf" style="width:0%"></i></div>
@@ -380,10 +395,91 @@ async function tdFetch(endpoint, params) {
   return data;
 }
 
+// ── 시계열 캐시 (localStorage) ──
+// 주봉: 6시간 캐시 (주봉은 주말 마감 후 갱신, 평일엔 변화 적음)
+// 일봉: 1시간 캐시 (일봉은 장중 변동 있음)
+const CACHE_TTL = {
+  '1week': 6 * 60 * 60 * 1000,   // 6시간
+  '1day':  1 * 60 * 60 * 1000,   // 1시간
+};
+
+function getCacheTTL(interval){
+  return CACHE_TTL[interval] || 60 * 60 * 1000;
+}
+
+function getCachedSeries(symbol, interval, size){
+  try{
+    const key = `ts_cache_${symbol}_${interval}_${size}`;
+    const raw = localStorage.getItem(key);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    const ttl = getCacheTTL(interval);
+    if(Date.now() - obj.ts > ttl) return null; // 만료
+    return obj.data;
+  }catch(e){ return null; }
+}
+
+function setCachedSeries(symbol, interval, size, data){
+  try{
+    const key = `ts_cache_${symbol}_${interval}_${size}`;
+    localStorage.setItem(key, JSON.stringify({ts: Date.now(), data}));
+  }catch(e){
+    // localStorage 용량 초과 시 - 오래된 캐시 삭제
+    try{
+      Object.keys(localStorage).filter(k => k.startsWith('ts_cache_')).forEach(k => {
+        try{
+          const o = JSON.parse(localStorage.getItem(k));
+          if(Date.now() - o.ts > 24*60*60*1000) localStorage.removeItem(k); // 24시간 이상 된 캐시 삭제
+        }catch(e){ localStorage.removeItem(k); }
+      });
+      // 다시 시도
+      const key = `ts_cache_${symbol}_${interval}_${size}`;
+      localStorage.setItem(key, JSON.stringify({ts: Date.now(), data}));
+    }catch(e2){}
+  }
+}
+
 async function getTimeSeries(symbol, interval='1week', size=60) {
+  // 캐시 확인
+  const cached = getCachedSeries(symbol, interval, size);
+  if(cached){
+    CACHE_HITS++;
+    return cached;
+  }
+  CACHE_MISSES++;
   const data = await tdFetch('time_series', {symbol, interval, outputsize: size});
   if (!data.values?.length) throw new Error('No data');
-  return data.values.slice().reverse().map(v => parseFloat(v.close));
+  const closes = data.values.slice().reverse().map(v => parseFloat(v.close));
+  setCachedSeries(symbol, interval, size, closes);
+  return closes;
+}
+
+// 캐시 통계 (디버깅용)
+let CACHE_HITS = 0, CACHE_MISSES = 0;
+
+function clearTSCache(){
+  Object.keys(localStorage).filter(k => k.startsWith('ts_cache_')).forEach(k => localStorage.removeItem(k));
+  CACHE_HITS = 0;
+  CACHE_MISSES = 0;
+}
+
+function getCacheInfo(){
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('ts_cache_'));
+  if(!keys.length) return {count: 0, oldestAge: 0, totalSize: 0};
+  let oldest = Date.now(), totalSize = 0;
+  keys.forEach(k => {
+    try{
+      const v = localStorage.getItem(k);
+      totalSize += v.length;
+      const o = JSON.parse(v);
+      if(o.ts < oldest) oldest = o.ts;
+    }catch(e){}
+  });
+  return {
+    count: keys.length,
+    oldestAge: Math.round((Date.now() - oldest) / 60000), // 분
+    totalSize: Math.round(totalSize / 1024), // KB
+  };
 }
 
 // ── Indicators ──
@@ -487,19 +583,19 @@ async function scanSPY() {
     banner.innerHTML=`<div class="mkt-icon">🟢</div><div class="mkt-info"><div class="mkt-title">BULL MARKET — 매수 가능</div><div class="mkt-sub">S&P500 EMA 정배열 · 신규 진입 OK</div></div>`;
     buyOkEl.textContent='✅ 가능';buyOkEl.style.color='var(--gn)';
     mktStateEl.textContent='강세장';mktStateEl.style.color='var(--gn)';
-    mktRuleEl.textContent='✅ 신규 매수 허용. 피라미딩 적극 활용하세요.';
+    mktRuleEl.textContent='✅ 신규 매수 허용. 추천 비중 그대로 매수하세요.';
   } else if (SPY_STATE==='bear') {
     banner.className='mkt-banner bear';
     banner.innerHTML=`<div class="mkt-icon">🔴</div><div class="mkt-info"><div class="mkt-title">BEAR MARKET — 매수 중단</div><div class="mkt-sub">S&P500 EMA20 하방 · 신규 진입 금지</div></div>`;
     buyOkEl.textContent='❌ 금지';buyOkEl.style.color='var(--rd)';
     mktStateEl.textContent='약세장';mktStateEl.style.color='var(--rd)';
-    mktRuleEl.textContent='🔴 신규 매수 금지. 2주 연속 유지 시 기존 포지션 50% 축소 실행.';
+    mktRuleEl.textContent='🔴 신규 매수 금지. 추세 이탈 종목 청산 우선.';
   } else {
     banner.className='mkt-banner neutral';
     banner.innerHTML=`<div class="mkt-icon">🟡</div><div class="mkt-info"><div class="mkt-title">NEUTRAL — 주의 구간</div><div class="mkt-sub">S&P500 EMA 전환 중 · 신중하게</div></div>`;
     buyOkEl.textContent='🟡 신중';buyOkEl.style.color='var(--yl)';
     mktStateEl.textContent='중립';mktStateEl.style.color='var(--yl)';
-    mktRuleEl.textContent='🟡 고점수 종목만 소량 진입. 피라미딩 자제.';
+    mktRuleEl.textContent='🟡 STRONG 신호만 진입 권장. 비중 줄여서 시작.';
   }
 
   return SPY_STATE;
@@ -673,14 +769,14 @@ function updateCard(ticker, d) {
   const ab=document.getElementById(`ab-${ticker}`);
   if (d.signal==='STRONG'){
     ab.className='action-box strong-go';
-    ab.innerHTML=`<strong>★ 강한 매수</strong> — MACD 음→양 크로스 확인!<br>피라미딩: ${d.pyramid}<br>손절: ${d.trailStop}`;
+    ab.innerHTML=`<strong>★ 강한 매수</strong> — MACD 음→양 크로스 확인!<br>매수: 추천 비중 한 번에 매수 (큰 금액은 2~3일 분할 가능)<br>손절: 주봉 EMA20 이탈 시 청산`;
   } else if (d.signal==='BUY'){
     const mktNote=SPY_STATE==='bull'?'✅ 시장 호조':'⚠️ 시장 주의';
     ab.className='action-box go';
-    ab.innerHTML=`<strong>매수 가능</strong> (${mktNote})<br>피라미딩: ${d.pyramid}<br>손절: ${d.trailStop}`;
+    ab.innerHTML=`<strong>매수 가능</strong> (${mktNote})<br>매수: 추천 비중 한 번에 매수<br>손절: 주봉 EMA20 이탈 시 청산`;
   } else if (d.signal==='SELL'){
     ab.className='action-box stop';
-    ab.innerHTML=`<strong>매수 금지</strong> — 추세 이탈 상태<br>보유 중이면 EMA20 확인 후 청산 검토`;
+    ab.innerHTML=`<strong>매수 금지</strong> — 추세 이탈 상태<br>보유 중이면 EMA20 확인 후 청산 (휩소 방지: 14일 재진입 금지)`;
   } else {
     ab.className='action-box hold';
     ab.innerHTML=`<strong>대기</strong> — 정배열 전환 확인 후 진입<br>관찰 목록 유지`;
@@ -700,29 +796,45 @@ async function scanAll() {
 
   btn.disabled=true;btn.classList.add('ld');pb.classList.add('on');
 
+  // 캐시 카운트 리셋
+  CACHE_HITS = 0;
+  CACHE_MISSES = 0;
+  const startTime = Date.now();
+
   // Step 1: SPY market filter
   st.textContent='S&P500 시장 상태 확인 중...';
+  const spyMissesBefore = CACHE_MISSES;
   try { await scanSPY(); } catch(e) { SPY_STATE='neutral'; }
-  await sleep(8000);
+  // SPY가 캐시에서 왔으면 sleep 스킵
+  if(CACHE_MISSES > spyMissesBefore) await sleep(8000);
 
   const all=[...HOLD,...CYCLE,...WATCH];
   let success=0;
 
   for (let i=0;i<all.length;i++) {
     const t=all[i].t;
-    st.textContent=`${t} 스캔 중... (${i+1}/${all.length})`;
+    const cacheStatus = `(캐시 ${CACHE_HITS}/${CACHE_HITS+CACHE_MISSES}히트)`;
+    st.textContent=`${t} 스캔 중... (${i+1}/${all.length}) ${cacheStatus}`;
     pbf.style.width=((i+1)/all.length*100)+'%';
 
+    const missesBefore = CACHE_MISSES;
     const data=await scanOne(t);
     SCAN_RESULTS[t]={...data,name:all[i].n,defaultWeight:all[i].w};
     updateCard(t,data);
 
     if (data.signal!=='ERR') success++;
-    if (i<all.length-1) await sleep(8000);
+    // API 호출 발생한 경우에만 8초 대기 (캐시 히트면 스킵)
+    if (i<all.length-1 && CACHE_MISSES > missesBefore) await sleep(8000);
   }
 
-  st.textContent=`✅ 완료! ${success}/${all.length}개 스캔 | API ${success+1}회 호출 (SPY 포함)`;
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  const apiCalls = CACHE_MISSES;
+  const cacheHits = CACHE_HITS;
+  st.textContent=`✅ 완료 (${elapsed}초)! ${success}/${all.length}개 | API ${apiCalls}회 + 캐시 ${cacheHits}회`;
   document.getElementById('tm').textContent=new Date().toLocaleString('ko-KR');
+
+  // 캐시 상태 갱신
+  updateCacheStatus();
 
   // Auto-load Fear & Greed from SPY data
   if (SPY_DATA) autoFearGreed();
@@ -1223,10 +1335,9 @@ async function scanDaily(){
 
   for(const t of tickers){
     try{
-      // 일봉 30일치 (EMA10 + 여유)
-      const data = await tdFetch('time_series', {symbol:t, interval:'1day', outputsize:30});
-      if(!data.values?.length) throw new Error('No data');
-      const closes = data.values.slice().reverse().map(v => parseFloat(v.close));
+      const missesBefore = CACHE_MISSES;
+      // 일봉 30일치 (EMA10 + 여유) - 캐시 적용
+      const closes = await getTimeSeries(t, '1day', 30);
       const price = closes[closes.length-1];
       const prevPrice = closes[closes.length-2];
       const change = ((price-prevPrice)/prevPrice)*100;
@@ -1262,8 +1373,8 @@ async function scanDaily(){
         </div>
       </div>`;
 
-      // API rate limit 대기
-      await new Promise(r => setTimeout(r, 1500));
+      // API rate limit 대기 (캐시 미스 시에만)
+      if(CACHE_MISSES > missesBefore) await new Promise(r => setTimeout(r, 1500));
     }catch(e){
       html += `<div style="padding:8px;color:var(--dm);font-size:.7rem">${t}: 오류 ${e.message}</div>`;
     }
@@ -1284,6 +1395,25 @@ async function scanDaily(){
 
 // 페이지 로드 시 보유 종목 복원
 window.addEventListener('load', loadHoldings);
+
+// 캐시 상태 UI
+function updateCacheStatus(){
+  const el = document.getElementById('cacheStatus');
+  if(!el) return;
+  const info = getCacheInfo();
+  if(info.count === 0){
+    el.textContent = '💾 캐시 없음 (첫 스캔 후 저장됨)';
+    el.style.color = 'var(--dm)';
+  } else {
+    const ageStr = info.oldestAge < 60 ? `${info.oldestAge}분 전` :
+                   info.oldestAge < 60*24 ? `${Math.round(info.oldestAge/60)}시간 전` :
+                   `${Math.round(info.oldestAge/60/24)}일 전`;
+    el.innerHTML = `💾 캐시 ${info.count}개 · 가장 오래된 데이터 ${ageStr} · ${info.totalSize}KB`;
+    el.style.color = info.oldestAge > 60*6 ? 'var(--yl)' : 'var(--gn)';
+  }
+}
+window.addEventListener('load', updateCacheStatus);
+setInterval(updateCacheStatus, 30000); // 30초마다 갱신
 
 // ── Fear & Greed helpers ──
 function drawGauge(value) {

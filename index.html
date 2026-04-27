@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>추세추종 백테스팅 v3</title>
+<title>추세추종 백테스팅 v3 · B+DD 확정</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700;800&display=swap');
 :root{
@@ -79,7 +79,19 @@ canvas{width:100%;height:220px;display:block;}
 
 <div class="hdr">
   <h1>TREND FOLLOWING BACKTEST <span class="badge">v3.7 · 18년</span></h1>
-  <div class="sub">3배 20% 고정 · 매주 리밸런싱 · 5년+10년 동시 결과 · 역방향 옵션</div>
+  <div class="sub">★★ B + DD 최종 확정 · CAGR 23.8% · MDD -15.9% · RAR 1.49 · 18년 51억</div>
+</div>
+
+<!-- BDD 시스템 최종 확정 표시 -->
+<div style="margin:0 0 16px 0;padding:14px;background:linear-gradient(135deg,rgba(255,64,96,.08),rgba(0,229,204,.08));border-radius:8px;border:2px solid var(--rd);">
+  <div style="font-size:.85rem;color:var(--rd);font-weight:700;margin-bottom:8px;">
+    ⭐⭐ 최종 확정 시스템: B + DD (46개 옵션 검증 결과)
+  </div>
+  <div style="font-size:.7rem;color:var(--tx);line-height:1.7;">
+    <strong style="color:var(--gn)">✅ ON:</strong> 옵션1 4개 (과열·변동성·휩소·추세) + 레버리지 + 비중 20% + DD<br>
+    <strong style="color:var(--rd)">❌ OFF:</strong> 옵션 D/A/B/C/R/P, 휩소방지, 동적 레버리지, 비중 25%<br>
+    <strong style="color:var(--cy)">📊 검증:</strong> 18년 CAGR <strong>23.8%</strong> · MDD <strong>-15.9%</strong> · RAR <strong>1.49</strong> · 1억→51.4억
+  </div>
 </div>
 
 <div class="cfg">
@@ -128,12 +140,12 @@ canvas{width:100%;height:220px;display:block;}
 
     <!-- 드로다운 분할 진입 -->
     <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--tx);cursor:pointer;padding:8px;background:rgba(255,64,96,.05);border-radius:6px;border:1px solid rgba(255,64,96,.2);">
-      <input type="checkbox" id="optDrawdownMode" style="cursor:pointer;">
-      <span><strong style="color:var(--rd)">🚨 드로다운 분할 진입</strong> — QQQ 신고가 <strong>-25%/-35%/-45%</strong> 시 QQQ <strong>30%/60%/100%</strong> 바이앤홀드</span>
+      <input type="checkbox" id="optDrawdownMode" checked style="cursor:pointer;">
+      <span><strong style="color:var(--rd)">🚨 드로다운 분할 진입 (BDD 기본)</strong> — QQQ 신고가 <strong>-25%/-35%/-45%</strong> 시 QQQ <strong>30%/60%/100%</strong> 바이앤홀드</span>
     </label>
     <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
-      ⚠️ 드로다운 옵션 ON 시 18년 MDD -25% 수준. 신용대출 환경에서는 OFF 권장.<br>
-      임계값: -25/-35/-45 (이전 -20/-30/-40에서 조정. 추세추종 자연 청산 후 진입하도록)
+      ✅ 검증된 시스템: B + DD = CAGR 23.8%, MDD -15.9%, RAR 1.49 (18년)<br>
+      ⚠️ MDD -16% 견딜 수 있는 자기자본 필요
     </div>
 
     <!-- 3배 휩소방지 옵션 (NEW) -->
@@ -156,6 +168,156 @@ canvas{width:100%;height:220px;display:block;}
       </label>
       <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
         🎯 거래 횟수 30~50% 감소 예상 · 실거래 수수료 부담 감소 · 단 일부 큰 수익 놓칠 수 있음
+      </div>
+
+      <!-- 옵션 D: 주봉 진입 + 일봉 청산 (NEW) -->
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,229,204,.3);">
+        <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;background:rgba(0,229,204,.08);border-radius:6px;">
+          <input type="checkbox" id="optWeeklyEntry" style="cursor:pointer;">
+          <span><strong style="color:var(--cy)">📅 옵션 D — 주봉 진입 + 일봉 청산</strong> · 진입은 주 1회, 청산은 매일 EMA10 이탈 체크</span>
+        </label>
+        <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
+          ⭐ 절충안: 거래 30~40% 감소 + 실거래 비용 -3.7%p/년 절약 예상<br>
+          ⚠️ 진입 1주 늦어 알파 일부 손실 가능 · 백테스팅 필요
+        </div>
+      </div>
+    </div>
+
+    <!-- 공격적 옵션 (CAGR 20% 도전) - NEW -->
+    <div style="margin-top:12px;padding:10px;background:rgba(255,64,96,.04);border-radius:6px;border:1px solid rgba(255,64,96,.2);">
+      <div style="font-family:'Space Mono',monospace;font-size:.55rem;color:var(--rd);letter-spacing:1px;margin-bottom:8px;">3배 비중 조정 (변동성 손실 vs 알파 트레이드오프)</div>
+
+      <!-- 3배 비중 라디오 -->
+      <div style="padding:6px;margin-bottom:8px;">
+        <div style="font-size:.7rem;color:var(--tx);margin-bottom:6px;">📊 3배 비중 (종목당 최대):</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;cursor:pointer;padding:4px 8px;background:rgba(0,229,204,.05);border-radius:4px;">
+            <input type="radio" name="levPctRadio" value="5" style="cursor:pointer;"> 5%
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;cursor:pointer;padding:4px 8px;background:rgba(0,229,204,.05);border-radius:4px;">
+            <input type="radio" name="levPctRadio" value="10" style="cursor:pointer;"> 10%
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;cursor:pointer;padding:4px 8px;background:rgba(0,229,204,.05);border-radius:4px;">
+            <input type="radio" name="levPctRadio" value="15" style="cursor:pointer;"> 15%
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;cursor:pointer;padding:4px 8px;background:rgba(0,229,204,.1);border-radius:4px;border:1px solid rgba(0,229,204,.4);">
+            <input type="radio" name="levPctRadio" value="20" style="cursor:pointer;" checked> <strong style="color:var(--cy)">20% (기본)</strong>
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;cursor:pointer;padding:4px 8px;background:rgba(255,64,96,.05);border-radius:4px;">
+            <input type="radio" name="levPctRadio" value="25" style="cursor:pointer;"> 25%
+          </label>
+        </div>
+      </div>
+
+      <!-- 호환용 hidden 체크박스 (기존 코드 안 깨지게) -->
+      <input type="checkbox" id="optLev25" style="display:none;">
+
+      <!-- 동적 레버리지 (기존 dynLev 활용) -->
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;">
+        <input type="checkbox" id="optDynLevAggro" style="cursor:pointer;">
+        <span><strong style="color:var(--rd)">⚡ 동적 레버리지</strong> · 점수 8+→25%, 6-7→15%, 5→5% (점수별 차등)</span>
+      </label>
+      <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
+        💡 비중 줄이면 변동성 손실 적지만 알파도 작아짐 · 백테스팅 결과로 최적 비중 찾기<br>
+        ⚠️ 신용 운영 시 마진콜 위험 고려
+      </div>
+    </div>
+
+    <!-- 옵션 R: 회복 진입 (NEW) -->
+    <div style="margin-top:12px;padding:10px;background:rgba(255,193,7,.04);border-radius:6px;border:1px solid rgba(255,193,7,.2);">
+      <div style="font-family:'Space Mono',monospace;font-size:.55rem;color:var(--yl);letter-spacing:1px;margin-bottom:8px;">옵션 R: 섹터별 회복 진입 (큰 하락 후 큰 비중)</div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;margin-bottom:6px;">
+        <input type="checkbox" id="optRecoveryMode" style="cursor:pointer;">
+        <span><strong style="color:var(--yl)">🔄 옵션 R 활성화</strong> · 종목 -25% 도달 후 EMA20 회복 시 비중 30% 진입</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optRecoveryDelay" style="cursor:pointer;">
+        <span>📅 R-지연: EMA20 회복 4주 연속 후 진입 (가짜 신호 차단)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;padding-left:24px;">
+        <input type="checkbox" id="optRecoveryAggressive" style="cursor:pointer;">
+        <span>💪 R-공격: 드로다운 단계별 비중 차등 (-25%→30%, -35%→40%, -45%→50%)</span>
+      </label>
+
+      <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
+        💡 큰 하락 후 회복기엔 큰 알파 가능 (GDX +180%, SOXL +600% 등)<br>
+        ⚠️ "떨어지는 칼" 위험 — 가짜 회복 신호 시 큰 손실<br>
+        🎯 권장: R + R-지연 (가짜 신호 차단)
+      </div>
+    </div>
+
+    <!-- 옵션 P: Pullback 추가 매수 (NEW) -->
+    <div style="margin-top:12px;padding:10px;background:rgba(0,229,204,.04);border-radius:6px;border:1px solid rgba(0,229,204,.2);">
+      <div style="font-family:'Space Mono',monospace;font-size:.55rem;color:var(--cy);letter-spacing:1px;margin-bottom:8px;">옵션 P: Pullback 추가 매수 (보유 중 눌림 시)</div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;margin-bottom:6px;">
+        <input type="checkbox" id="optPullbackMode" style="cursor:pointer;">
+        <span><strong style="color:var(--cy)">📈 옵션 P 활성화</strong> · 보유 종목이 EMA20 ±2% 터치 시 +10% 추가 매수</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optPullbackSafe" style="cursor:pointer;">
+        <span>🛡️ P-안전: 양봉 회복 후 추가 매수 (가짜 신호 차단)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optPullbackLight" style="cursor:pointer;">
+        <span>🪶 P-경량: 추가 매수 비중 +5% (기본 +10%)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optPullbackAggro" style="cursor:pointer;">
+        <span>💪 P-공격: 추가 매수 비중 +20%</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;padding-left:24px;">
+        <input type="checkbox" id="optPullbackLower" style="cursor:pointer;">
+        <span>📉 P-하단: 볼린저 하단 (EMA20 -5~15%) 시만 +20% (큰 눌림)</span>
+      </label>
+
+      <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
+        💡 추세 종목의 일시 눌림 매수 (Mark Minervini 전략)<br>
+        ⚠️ 추가 매수 후 EMA10 이탈 시 전체 청산 (큰 손실 가능)<br>
+        🎯 권장: P + P-안전 (가짜 신호 차단)
+      </div>
+    </div>
+
+    <!-- 옵션 P (1배): Pullback 추가 매수 - 1배 ETF만 (NEW) -->
+    <div style="margin-top:12px;padding:10px;background:rgba(76,175,80,.04);border-radius:6px;border:1px solid rgba(76,175,80,.2);">
+      <div style="font-family:'Space Mono',monospace;font-size:.55rem;color:#4caf50;letter-spacing:1px;margin-bottom:8px;">옵션 P (1배): 1배 ETF Pullback 추가 매수 (변동성 침식 없음)</div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--tx);cursor:pointer;padding:6px;margin-bottom:6px;">
+        <input type="checkbox" id="optPullback1x" style="cursor:pointer;">
+        <span><strong style="color:#4caf50">📊 옵션 P-1x 활성화</strong> · 1배 보유 종목 EMA20 ±3% 시 +5% 추가 (한국 ETF 적합)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optPullback1xSafe" style="cursor:pointer;">
+        <span>🛡️ P1x-안전: 주봉 양봉 (weekChange ≥ 0)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optPullback1xLight" style="cursor:pointer;">
+        <span>🪶 P1x-경량: +3% (기본 +5%)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;margin-bottom:4px;padding-left:24px;">
+        <input type="checkbox" id="optPullback1xAggro" style="cursor:pointer;">
+        <span>💪 P1x-공격: +10% (큰 추가 매수)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--tx);cursor:pointer;padding:4px 6px;padding-left:24px;">
+        <input type="checkbox" id="optPullback1xLower" style="cursor:pointer;">
+        <span>📉 P1x-하단: EMA20 -3~8% 시만 +10% (큰 눌림만)</span>
+      </label>
+
+      <div style="font-size:.55rem;color:var(--dm);margin-top:6px;line-height:1.5;padding-left:8px;">
+        💡 1배 ETF는 변동성 침식 없음 → 풀백 전략 적합<br>
+        ✓ 한국 ETF 6종 운영 시 참고용<br>
+        🎯 권장: P-1x + P1x-안전 (양봉 회복 후 추가)
       </div>
     </div>
   </div>
@@ -761,6 +923,12 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
   let qqqValue=1.0;
   let qqqStartPrice=null;
 
+  // 옵션 P (1배) 추적 초기화
+  window.PULLBACK_TRACK_1X = {};
+  window.PULLBACK_COUNT_1X = 0;
+  // simulate 함수에서 opts 가져오기 (파라미터로 안 받으니 window에서)
+  const opts = window.STRATEGY_OPTS || {};
+
   const equityCurve=[]; // {date, port, qqq}
   const weeklyLog=[]; // 매주 상태
 
@@ -817,6 +985,7 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
           cashPct+=portfolio[item.t];
           portfolio[item.t]=0;
           recentExit[item.t] = 1; // 청산 카운터 시작
+          if(window.PULLBACK_TRACK_1X) window.PULLBACK_TRACK_1X[item.t] = false;
         }
       }
       // 청산 후 경과 주 수 증가
@@ -944,6 +1113,7 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
             if(!inBuys){
               cashPct+=portfolio[item.t];
               portfolio[item.t]=0;
+              if(window.PULLBACK_TRACK_1X) window.PULLBACK_TRACK_1X[item.t] = false;
             }
           }
         }
@@ -1011,6 +1181,50 @@ function simulate(portWeeklySignals, spySignals, rebalWeeks, startDate, endDate,
           if(newPort[item.t] > 0) recentExit[item.t] = 0;
         }
         cashPct=Math.max(0.05,Math.min(1.0,cashPct));
+
+        // 옵션 P (1배): Pullback 추가 매수
+        // 보유 중 종목이 EMA20 ±3% 이내 + 정배열 유지 시 비중 +5%p
+        if(opts.pullback1x){
+          if(!window.PULLBACK_TRACK_1X) window.PULLBACK_TRACK_1X = {};
+          for(const item of PORT){
+            const cur = portfolio[item.t];
+            if(cur <= 0) continue;
+            const sig = weekSigs[item.t];
+            if(!sig) continue;
+            // 한 사이클에 한 번만 (청산 시 리셋)
+            if(window.PULLBACK_TRACK_1X[item.t]) continue;
+            // 조건: 정배열 + EMA20 ±3% + RSI < 65
+            const trendOk = sig.aligned && sig.macdOk;
+            const ema20 = sig.e20 || sig.ema20;
+            const nearEMA20 = ema20 && Math.abs((sig.price - ema20) / ema20) <= 0.03;
+            const rsiOk = !sig.rsi || sig.rsi < 65;
+            // P-안전 (1배): 양봉 (주봉 weekChange >= 0)
+            const candleOk = !opts.pullback1xSafe || (sig.weekChange != null && sig.weekChange >= 0);
+            // P-하단 (1배): 가격이 EMA20 -3 ~ -8% (작은 눌림 깊게)
+            const lowerOk = !opts.pullback1xLower || (ema20 && sig.price <= ema20 * 0.97 && sig.price >= ema20 * 0.92);
+            
+            const triggered = opts.pullback1xLower 
+              ? (trendOk && lowerOk && rsiOk && candleOk)
+              : (trendOk && nearEMA20 && rsiOk && candleOk);
+            
+            if(triggered){
+              // 추가 비중 결정
+              let addPct = 0.05; // 기본 +5%
+              if(opts.pullback1xLight) addPct = 0.03; // 경량 +3%
+              if(opts.pullback1xAggro) addPct = 0.10; // 공격 +10%
+              if(opts.pullback1xLower) addPct = 0.10; // 하단 +10%
+              
+              const canAdd = Math.min(addPct, cashPct - 0.05);
+              if(canAdd >= 0.02){
+                portfolio[item.t] += canAdd;
+                cashPct -= canAdd;
+                window.PULLBACK_TRACK_1X[item.t] = true; // 같은 사이클에 한 번만
+                if(!window.PULLBACK_COUNT_1X) window.PULLBACK_COUNT_1X = 0;
+                window.PULLBACK_COUNT_1X++;
+              }
+            }
+          }
+        }
       }
     }
 
@@ -1208,7 +1422,26 @@ function simLev(base1xResult, portWeeklySignals, years, maxLevPct){
   const yearlyContrib = {};
   years.forEach(y => yearlyContrib[y] = 0);
 
+  // 옵션 D 추적: 마지막 진입한 주봉 신호 날짜 (같은 신호로 재진입 차단)
+  window.LEV_LAST_ENTRY_WEEK = {};
+
+  // 옵션 R 추적: 각 base별 회복 진입 상태
+  // - high: 18주 신고가
+  // - drawdownLevel: 도달한 최대 드로다운 (0=없음, 1=-25%, 2=-35%, 3=-45%)
+  // - aboveEMA20Weeks: EMA20 위 연속 주 수 (주봉 기준)
+  // - recoveryEntered: 이번 사이클에 회복 진입 했는지
+  const recoveryState = {};
+  Object.keys(LEV3X).forEach(base => {
+    recoveryState[base] = {
+      high: 0,
+      drawdownLevel: 0,
+      aboveEMA20Weeks: 0,
+      recoveryEntered: false,
+    };
+  });
+
   let prevPrices = {};
+  let lastWeeklyDate = ''; // 주봉 갱신 추적
 
   for(let i = 0; i < allDates.length; i++){
     const date = allDates[i];
@@ -1262,6 +1495,49 @@ function simLev(base1xResult, portWeeklySignals, years, maxLevPct){
           days: days || 1,
         });
         delete holdings[base];
+      } else {
+        // 옵션 P: Pullback 추가 매수 (청산 안 된 경우만)
+        if(optsForLev.pullbackMode && !hold.pullbackAdded){
+          // 조건 1: EMA20 정배열 유지
+          const trendOk = sig.aligned && sig.macdOk;
+          // 조건 2: 가격이 EMA20 ±2% 이내
+          const ema20 = sig.ema20;
+          const nearEMA20 = ema20 && Math.abs((sig.price - ema20) / ema20) <= 0.02;
+          // 조건 3: RSI < 60 (과열 아님)
+          const rsiOk = !sig.rsi || sig.rsi < 60;
+          // 조건 4: P-안전 옵션이면 양봉 추가 확인
+          const prev = prevPrices[base];
+          const candleOk = !optsForLev.pullbackSafe || (prev && sig.price >= prev);
+          // 조건 5: P-하단 옵션이면 볼린저 하단 (EMA20 - 2*표준편차)
+          let inLowerBand = nearEMA20;
+          if(optsForLev.pullbackLower){
+            // 볼린저 하단 근사: EMA20 - 7% (3배 ETF 기준)
+            inLowerBand = ema20 && sig.price <= ema20 * 0.95 && sig.price >= ema20 * 0.85;
+          }
+          
+          if(trendOk && (optsForLev.pullbackLower ? inLowerBand : nearEMA20) && rsiOk && candleOk){
+            // 추가 매수 비중 결정
+            let addPct = 0.10; // P-기본: +10%p
+            if(optsForLev.pullbackLight) addPct = 0.05; // 경량
+            if(optsForLev.pullbackAggro) addPct = 0.20; // 공격
+            if(optsForLev.pullbackLower) addPct = 0.20; // 하단 매수는 +20%
+            
+            // 현재 사용 가능 자금 체크
+            const totalLev = Object.values(holdings).reduce((s,h)=>s+h.weight, 0);
+            const cashAvail = Math.max(0.20, 1 - totalLev);
+            const canAdd = Math.min(addPct, cashAvail - totalLev + hold.weight);
+            
+            if(canAdd >= 0.02){
+              // 가중평균 단가 갱신 (수익률 누적 유지)
+              const newWeight = hold.weight + canAdd;
+              hold.weight = newWeight;
+              hold.pullbackAdded = true; // 같은 사이클에 한 번만
+              // 통계용 (나중에 분석)
+              if(!window.PULLBACK_COUNT) window.PULLBACK_COUNT = 0;
+              window.PULLBACK_COUNT++;
+            }
+          }
+        }
       }
     }
 
@@ -1269,15 +1545,74 @@ function simLev(base1xResult, portWeeklySignals, years, maxLevPct){
     let totalLevWeight = Object.values(holdings).reduce((s,h)=>s+h.weight, 0);
     const cashPct = Math.max(0.20, 1 - totalLevWeight);
 
+    // 옵션 R 추적: 매주 회복 상태 갱신 (주봉 데이터로)
+    if(optsForLev.recoveryMode){
+      for(const base of Object.keys(LEV3X)){
+        const wkSigs = portWeeklySignals[base] || [];
+        const wkSig = wkSigs.findLast(x => x.date <= date);
+        if(!wkSig) continue;
+
+        // 새 주봉 신호일 때만 갱신 (같은 주 중복 방지)
+        const wkDate = wkSig.date;
+        if(recoveryState[base].lastUpdate === wkDate) continue;
+        recoveryState[base].lastUpdate = wkDate;
+
+        const price = wkSig.price;
+        const ema20 = wkSig.e20;
+
+        // 신고가 갱신
+        if(price > recoveryState[base].high){
+          recoveryState[base].high = price;
+          // 신고가 갱신되면 사이클 리셋
+          recoveryState[base].drawdownLevel = 0;
+          recoveryState[base].aboveEMA20Weeks = 0;
+          recoveryState[base].recoveryEntered = false;
+        }
+
+        // 드로다운 단계 추적
+        const drawdown = (price - recoveryState[base].high) / recoveryState[base].high;
+        if(drawdown <= -0.45) recoveryState[base].drawdownLevel = 3;
+        else if(drawdown <= -0.35) recoveryState[base].drawdownLevel = Math.max(2, recoveryState[base].drawdownLevel);
+        else if(drawdown <= -0.25) recoveryState[base].drawdownLevel = Math.max(1, recoveryState[base].drawdownLevel);
+
+        // EMA20 위 연속 주 수 추적
+        if(ema20 && price > ema20){
+          recoveryState[base].aboveEMA20Weeks++;
+        } else {
+          recoveryState[base].aboveEMA20Weeks = 0;
+        }
+      }
+    }
+
     for(const [base, lev] of Object.entries(LEV3X)){
       if(holdings[base]) continue;
       const sig = sigMap[base][date];
       if(!sig) continue;
 
-      // 진입 조건: 일봉 buySignal (aligned + macdOk + score>=5)
-      if(!sig.buySignal) continue;
+      // 진입 조건 결정 - 옵션 D ON이면 주봉 신호 전환 시 한 번만 진입
+      let canEnter = false;
+      if(optsForLev.weeklyEntry){
+        // 옵션 D: "현재 주의 주봉 신호가 BUY"이면서, 이 주봉 신호로 아직 진입 안 한 경우
+        const wkSigs = portWeeklySignals[base] || [];
+        const wkSig = wkSigs.findLast(x => x.date <= date);
+        const wkOk = wkSig && wkSig.aligned && wkSig.macdOk && wkSig.score >= 5;
+        // 이 주봉 신호로 이미 진입했었는지 추적 (lastEntryWeek로)
+        if(!window.LEV_LAST_ENTRY_WEEK) window.LEV_LAST_ENTRY_WEEK = {};
+        const lastEntryWk = window.LEV_LAST_ENTRY_WEEK[base];
+        const currentWkDate = wkSig?.date;
+        const newWeekSignal = wkOk && (lastEntryWk !== currentWkDate);
+        // 일봉 EMA10 위 + 일봉 정배열도 확인 (실제 운영 안전 장치)
+        const dailyOk = sig.ema10 && sig.price > sig.ema10 && sig.aligned;
+        if(newWeekSignal && dailyOk){
+          canEnter = true;
+        }
+      } else {
+        // 기본: 일봉 buySignal
+        canEnter = sig.buySignal;
+      }
+      if(!canEnter) continue;
 
-      // 옵션 C: 강한추세 필터 (3배에 추가 적용)
+      // 옵션 C: 강한추세 필터 (3배에 추가 적용) - 일봉 기준 체크
       if(optsForLev.levStrongFilter){
         // score >= 7
         if(sig.score < 7) continue;
@@ -1296,6 +1631,25 @@ function simLev(base1xResult, portWeeklySignals, years, maxLevPct){
         else baseLevPct = 5;
       }
 
+      // 옵션 R: 회복 진입 시 비중 상향
+      let isRecoveryEntry = false;
+      if(optsForLev.recoveryMode){
+        const rs = recoveryState[base];
+        // 조건: 드로다운 1단계 이상 도달 + EMA20 위 N주 연속 + 이번 사이클 첫 진입
+        const minWeeksAbove = optsForLev.recoveryDelay ? 4 : 1; // 지연 옵션
+        if(rs.drawdownLevel >= 1 && rs.aboveEMA20Weeks >= minWeeksAbove && !rs.recoveryEntered){
+          isRecoveryEntry = true;
+          // 공격 옵션: 드로다운 단계별 비중 차등
+          if(optsForLev.recoveryAggressive){
+            if(rs.drawdownLevel === 3) baseLevPct = 50;
+            else if(rs.drawdownLevel === 2) baseLevPct = 40;
+            else baseLevPct = 30;
+          } else {
+            baseLevPct = 30; // 기본 R: 회복 시 30%
+          }
+        }
+      }
+
       const avail = Math.min(baseLevPct/100, cashPct - totalLevWeight);
       if(avail < 0.01) continue;
 
@@ -1306,8 +1660,24 @@ function simLev(base1xResult, portWeeklySignals, years, maxLevPct){
         cumReturn: 0,
         daysHeld: 0,      // 옵션 B용
         exitStreak: 0,    // 옵션 A용
+        isRecovery: isRecoveryEntry, // 옵션 R 진입 표시
       };
       totalLevWeight += avail;
+
+      // 옵션 R: 회복 진입 후 플래그 설정 (같은 사이클 재진입 차단)
+      if(optsForLev.recoveryMode && isRecoveryEntry){
+        recoveryState[base].recoveryEntered = true;
+      }
+
+      // 옵션 D: 진입한 주봉 신호 기록 (같은 주봉 신호로 재진입 차단)
+      if(optsForLev.weeklyEntry){
+        const wkSigs = portWeeklySignals[base] || [];
+        const wkSig = wkSigs.findLast(x => x.date <= date);
+        if(wkSig){
+          if(!window.LEV_LAST_ENTRY_WEEK) window.LEV_LAST_ENTRY_WEEK = {};
+          window.LEV_LAST_ENTRY_WEEK[base] = wkSig.date;
+        }
+      }
     }
 
     // 가격 업데이트
@@ -1607,10 +1977,18 @@ async function run(){
   document.getElementById('diagPanel').style.display='block';
   console.log('🚀 백테스팅 시작');
 
-  // 고정값: 매주 리밸런싱, 3배 20%, 5년+10년 동시
+  // 고정값: 매주 리밸런싱, 3배 비중은 라디오로 선택 (5/10/15/20/25%)
   const rebalWeeks=1;
   const useLev=true;
-  const maxLevPct=20;
+  // 라디오 또는 호환용 체크박스 우선
+  const radioLev = document.querySelector('input[name="levPctRadio"]:checked');
+  let maxLevPct = 20;
+  if(radioLev){
+    maxLevPct = parseInt(radioLev.value);
+  } else if(document.getElementById('optLev25').checked){
+    // 옛 호환 (체크박스만 ON)
+    maxLevPct = 25;
+  }
 
   // 전략 옵션 읽기 (새 역방향 옵션)
   window.STRATEGY_OPTS = {
@@ -1628,7 +2006,7 @@ async function run(){
     strictEntry: document.getElementById('optStrictEntry').checked,
     fastExit: document.getElementById('optFastExit').checked,
     momWeight: document.getElementById('optMomWeight').checked,
-    dynLev: document.getElementById('optDynLev').checked,
+    // dynLev은 아래 공격적 옵션과 통합 (optDynLev OR optDynLevAggro)
     // 약점 보완
     cycleBoost: document.getElementById('optCycleBoost').checked,
     whipsaw: document.getElementById('optWhipsaw').checked,
@@ -1641,6 +2019,28 @@ async function run(){
     levExitDelay: document.getElementById('optLevExitDelay').checked,
     levMinHold: document.getElementById('optLevMinHold').checked,
     levStrongFilter: document.getElementById('optLevStrongFilter').checked,
+    // 옵션 D: 주봉 진입 (NEW)
+    weeklyEntry: document.getElementById('optWeeklyEntry').checked,
+    // 공격적 옵션 (NEW)
+    lev25: document.getElementById('optLev25').checked,
+    // dynLev은 별도 옵션으로 이미 위에 있음, optDynLevAggro로도 ON 가능
+    dynLev: document.getElementById('optDynLev').checked || document.getElementById('optDynLevAggro').checked,
+    // 옵션 R: 회복 진입 (NEW)
+    recoveryMode: document.getElementById('optRecoveryMode').checked,
+    recoveryDelay: document.getElementById('optRecoveryDelay').checked,
+    recoveryAggressive: document.getElementById('optRecoveryAggressive').checked,
+    // 옵션 P: Pullback 추가 매수 (3배) (NEW)
+    pullbackMode: document.getElementById('optPullbackMode').checked,
+    pullbackSafe: document.getElementById('optPullbackSafe').checked,
+    pullbackLight: document.getElementById('optPullbackLight').checked,
+    pullbackAggro: document.getElementById('optPullbackAggro').checked,
+    pullbackLower: document.getElementById('optPullbackLower').checked,
+    // 옵션 P (1배): Pullback 추가 매수 - 1배 ETF만 (NEW)
+    pullback1x: document.getElementById('optPullback1x').checked,
+    pullback1xSafe: document.getElementById('optPullback1xSafe').checked,
+    pullback1xLight: document.getElementById('optPullback1xLight').checked,
+    pullback1xAggro: document.getElementById('optPullback1xAggro').checked,
+    pullback1xLower: document.getElementById('optPullback1xLower').checked,
   };
   console.log('전략 옵션:', JSON.stringify(window.STRATEGY_OPTS));
 
@@ -2050,6 +2450,104 @@ const SWEEP_COMBOS = [
     leverage:true, levStrongFilter:true},
   {name:'옵션1+레버리지 + A+B+C 모두',
     leverage:true, levExitDelay:true, levMinHold:true, levStrongFilter:true},
+
+  // 옵션 D: 주봉 진입 + 일봉 청산 (NEW)
+  {name:'─── 옵션 D: 주봉 진입 + 일봉 청산 ───', separator:true},
+  {name:'⭐ 옵션1+레버리지 + 옵션D (주봉진입+일봉청산)',
+    leverage:true, weeklyEntry:true},
+
+  // 비중별 비교 (5/10/15/20/25%) - 옵션 D 기준
+  {name:'─── 3배 비중 최적화 (옵션 D 기준) ───', separator:true},
+  {name:'옵션D + 비중 5% (매우 보수)',
+    leverage:true, weeklyEntry:true, levPct:5},
+  {name:'옵션D + 비중 10% (보수)',
+    leverage:true, weeklyEntry:true, levPct:10},
+  {name:'옵션D + 비중 15% (중간)',
+    leverage:true, weeklyEntry:true, levPct:15},
+  {name:'⭐ 옵션D + 비중 20% (현재 베이스)',
+    leverage:true, weeklyEntry:true, levPct:20},
+  {name:'옵션D + 비중 25% (공격)',
+    leverage:true, weeklyEntry:true, levPct:25},
+
+  // 비중별 비교 (B 기준 - 일봉 진입 비교용)
+  {name:'─── 3배 비중 최적화 (베이스 B 기준) ───', separator:true},
+  {name:'B + 비중 5% (매우 보수)',
+    leverage:true, levPct:5},
+  {name:'B + 비중 10% (보수)',
+    leverage:true, levPct:10},
+  {name:'B + 비중 15% (중간)',
+    leverage:true, levPct:15},
+  {name:'⭐ B + 비중 20% (현재 베이스)',
+    leverage:true, levPct:20},
+
+  // 동적 레버리지 비교
+  {name:'─── 동적 레버리지 ───', separator:true},
+  {name:'옵션1+레버리지 + 동적레버리지',
+    leverage:true, dynLev:true},
+  {name:'옵션D + 동적레버리지',
+    leverage:true, weeklyEntry:true, dynLev:true},
+
+  // 드로다운 + 비중별 조합 (NEW)
+  {name:'─── 드로다운 + 비중 조합 (옵션 D + DD) ───', separator:true},
+  {name:'옵션D + 비중 10% + DD (매우 보수)',
+    leverage:true, weeklyEntry:true, levPct:10, drawdown:true},
+  {name:'옵션D + 비중 15% + DD (절충)',
+    leverage:true, weeklyEntry:true, levPct:15, drawdown:true},
+  {name:'⭐ 옵션D + 비중 20% + DD (균형)',
+    leverage:true, weeklyEntry:true, levPct:20, drawdown:true},
+
+  {name:'─── 드로다운 + 비중 조합 (B 베이스 + DD) ───', separator:true},
+  {name:'B + 비중 10% + DD',
+    leverage:true, levPct:10, drawdown:true},
+  {name:'B + 비중 15% + DD',
+    leverage:true, levPct:15, drawdown:true},
+  {name:'⭐⭐ B + 비중 20% + DD (검증된 23.8%)',
+    leverage:true, levPct:20, drawdown:true},
+
+  // 옵션 R: 섹터별 회복 진입 (NEW)
+  {name:'─── 옵션 R: 섹터별 회복 진입 ───', separator:true},
+  {name:'옵션D + R (간단, 즉시 회복)',
+    leverage:true, weeklyEntry:true, recoveryMode:true},
+  {name:'⭐ 옵션D + R + 지연 (4주 연속 EMA20 위)',
+    leverage:true, weeklyEntry:true, recoveryMode:true, recoveryDelay:true},
+  {name:'옵션D + R + 공격 (드로다운 단계별 30/40/50%)',
+    leverage:true, weeklyEntry:true, recoveryMode:true, recoveryAggressive:true},
+  {name:'옵션D + R + 지연 + 공격 (모두)',
+    leverage:true, weeklyEntry:true, recoveryMode:true, recoveryDelay:true, recoveryAggressive:true},
+  {name:'B + R + 지연 (베이스 + 회복 진입)',
+    leverage:true, recoveryMode:true, recoveryDelay:true},
+
+  // 옵션 P: Pullback 추가 매수 (NEW)
+  {name:'─── 옵션 P: Pullback 추가 매수 ───', separator:true},
+  {name:'B + P (기본, EMA20±2% 시 +10%)',
+    leverage:true, pullbackMode:true},
+  {name:'⭐ B + P + 안전 (양봉 회복 후 추가)',
+    leverage:true, pullbackMode:true, pullbackSafe:true},
+  {name:'B + P-경량 (+5%만)',
+    leverage:true, pullbackMode:true, pullbackLight:true},
+  {name:'B + P-공격 (+20%)',
+    leverage:true, pullbackMode:true, pullbackAggro:true},
+  {name:'B + P-하단 (볼린저 하단만)',
+    leverage:true, pullbackMode:true, pullbackLower:true},
+  {name:'⭐⭐ B + P + R (Pullback + Recovery 결합)',
+    leverage:true, pullbackMode:true, pullbackSafe:true, recoveryMode:true, recoveryDelay:true},
+  {name:'B + DD + P (드로다운 + Pullback)',
+    leverage:true, drawdown:true, pullbackMode:true, pullbackSafe:true},
+
+  // 옵션 P (1배): 1배 ETF Pullback 추가 매수 (NEW)
+  {name:'─── 옵션 P (1배): 1배 ETF Pullback ───', separator:true},
+  {name:'B + P-1x (기본, EMA20±3% 시 +5%)',
+    leverage:true, pullback1x:true},
+  {name:'⭐ B + P-1x + 안전 (주봉 양봉)',
+    leverage:true, pullback1x:true, pullback1xSafe:true},
+  {name:'B + P-1x-경량 (+3%)',
+    leverage:true, pullback1x:true, pullback1xLight:true},
+  {name:'B + P-1x-공격 (+10%)',
+    leverage:true, pullback1x:true, pullback1xAggro:true},
+  {name:'B + P-1x-하단 (EMA20 -3~8%)',
+    leverage:true, pullback1x:true, pullback1xLower:true},
+  {name:'⭐⭐ B + DD + P-1x (드로다운 + 1배 풀백)',
+    leverage:true, drawdown:true, pullback1x:true, pullback1xSafe:true},
 ];
 
 let SWEEP_RESULTS = [];
@@ -2062,6 +2560,20 @@ function setSweepOpts(combo){
     leverage: true, drawdown: false,
     // 휩소방지는 기본 OFF
     levExitDelay: false, levMinHold: false, levStrongFilter: false,
+    // 옵션 D 기본 OFF
+    weeklyEntry: false,
+    // 공격적 옵션 (NEW) 기본 OFF
+    lev25: false, dynLev: false,
+    // 비중 (NEW) - 라디오 직접 설정
+    levPct: 20,
+    // 옵션 R 기본 OFF
+    recoveryMode: false, recoveryDelay: false, recoveryAggressive: false,
+    // 옵션 P 기본 OFF
+    pullbackMode: false, pullbackSafe: false, pullbackLight: false,
+    pullbackAggro: false, pullbackLower: false,
+    // 옵션 P (1배) 기본 OFF
+    pullback1x: false, pullback1xSafe: false, pullback1xLight: false,
+    pullback1xAggro: false, pullback1xLower: false,
   };
   // combo가 명시한 값으로 덮어씀
   const c = {...defaults, ...combo};
@@ -2083,6 +2595,33 @@ function setSweepOpts(combo){
   document.getElementById('optLevExitDelay').checked = c.levExitDelay;
   document.getElementById('optLevMinHold').checked = c.levMinHold;
   document.getElementById('optLevStrongFilter').checked = c.levStrongFilter;
+  // 옵션 D 적용
+  document.getElementById('optWeeklyEntry').checked = c.weeklyEntry;
+  // 공격적 옵션 적용 (NEW)
+  document.getElementById('optLev25').checked = c.lev25;
+  document.getElementById('optDynLevAggro').checked = c.dynLev;
+  // 비중 라디오 설정 (NEW)
+  const radios = document.querySelectorAll('input[name="levPctRadio"]');
+  radios.forEach(r => r.checked = (parseInt(r.value) === c.levPct));
+  // 옵션 R 적용 (NEW)
+  document.getElementById('optRecoveryMode').checked = c.recoveryMode;
+  document.getElementById('optRecoveryDelay').checked = c.recoveryDelay;
+  document.getElementById('optRecoveryAggressive').checked = c.recoveryAggressive;
+  // 옵션 P 적용 (NEW)
+  document.getElementById('optPullbackMode').checked = c.pullbackMode;
+  document.getElementById('optPullbackSafe').checked = c.pullbackSafe;
+  document.getElementById('optPullbackLight').checked = c.pullbackLight;
+  document.getElementById('optPullbackAggro').checked = c.pullbackAggro;
+  document.getElementById('optPullbackLower').checked = c.pullbackLower;
+  // 옵션 P (1배) 적용 (NEW)
+  document.getElementById('optPullback1x').checked = c.pullback1x;
+  document.getElementById('optPullback1xSafe').checked = c.pullback1xSafe;
+  document.getElementById('optPullback1xLight').checked = c.pullback1xLight;
+  document.getElementById('optPullback1xAggro').checked = c.pullback1xAggro;
+  document.getElementById('optPullback1xLower').checked = c.pullback1xLower;
+  // optDynLev은 항상 OFF (공격적 옵션 박스의 dynLev만 사용)
+  const dynLevEl = document.getElementById('optDynLev');
+  if(dynLevEl) dynLevEl.checked = false;
 }
 
 async function runSingleBacktest(){
@@ -2107,7 +2646,7 @@ async function runSweep(){
     alert('❌ 캐시 데이터가 없습니다.\n먼저 "▶ 백테스팅 실행"을 1회 클릭해주세요.');
     return;
   }
-  if(!confirm(`옵션 비교를 시작합니다.\n\n• 12가지 조합\n  - 옵션1 풀세트 4종 (DD/Lev 변형)\n  - 일부 옵션 OFF로 1배 검증 4종\n  - 휩소방지 옵션 4종 (옵션 A/B/C/모두) ⭐ NEW\n• 예상 시간: 3~6분\n• 화면 꺼지지 않게 유지하세요\n\n계속할까요?`)){
+  if(!confirm(`옵션 비교를 시작합니다.\n\n• 46가지 조합\n  - 옵션1 풀세트 4종\n  - 1배 검증 4종\n  - 휩소방지 4종\n  - 옵션 D 1종\n  - 비중별 9종\n  - 동적 레버리지 2종\n  - 드로다운 + 비중 6종\n  - 옵션 R 5종\n  - 옵션 P 7종 (3배 풀백)\n  - 옵션 P-1x 6종 ⭐ NEW (1배 풀백)\n• 예상 시간: 13~25분\n• 화면 꺼지지 않게 유지하세요\n\n계속할까요?`)){
     return;
   }
 
@@ -2117,6 +2656,28 @@ async function runSweep(){
   const userSavedExitDelay = document.getElementById('optLevExitDelay').checked;
   const userSavedMinHold = document.getElementById('optLevMinHold').checked;
   const userSavedStrongFilter = document.getElementById('optLevStrongFilter').checked;
+  const userSavedWeeklyEntry = document.getElementById('optWeeklyEntry').checked;
+  const userSavedLev25 = document.getElementById('optLev25').checked;
+  const userSavedDynLevAggro = document.getElementById('optDynLevAggro').checked;
+  // 비중 라디오 백업
+  const radioChecked = document.querySelector('input[name="levPctRadio"]:checked');
+  const userSavedLevPct = radioChecked ? parseInt(radioChecked.value) : 20;
+  // 옵션 R 백업
+  const userSavedRecoveryMode = document.getElementById('optRecoveryMode').checked;
+  const userSavedRecoveryDelay = document.getElementById('optRecoveryDelay').checked;
+  const userSavedRecoveryAggressive = document.getElementById('optRecoveryAggressive').checked;
+  // 옵션 P 백업
+  const userSavedPullbackMode = document.getElementById('optPullbackMode').checked;
+  const userSavedPullbackSafe = document.getElementById('optPullbackSafe').checked;
+  const userSavedPullbackLight = document.getElementById('optPullbackLight').checked;
+  const userSavedPullbackAggro = document.getElementById('optPullbackAggro').checked;
+  const userSavedPullbackLower = document.getElementById('optPullbackLower').checked;
+  // 옵션 P (1배) 백업
+  const userSavedPullback1x = document.getElementById('optPullback1x').checked;
+  const userSavedPullback1xSafe = document.getElementById('optPullback1xSafe').checked;
+  const userSavedPullback1xLight = document.getElementById('optPullback1xLight').checked;
+  const userSavedPullback1xAggro = document.getElementById('optPullback1xAggro').checked;
+  const userSavedPullback1xLower = document.getElementById('optPullback1xLower').checked;
 
   SWEEP_RUNNING = true;
   SWEEP_RESULTS = [];
@@ -2192,6 +2753,29 @@ async function runSweep(){
   document.getElementById('optLevExitDelay').checked = userSavedExitDelay;
   document.getElementById('optLevMinHold').checked = userSavedMinHold;
   document.getElementById('optLevStrongFilter').checked = userSavedStrongFilter;
+  document.getElementById('optWeeklyEntry').checked = userSavedWeeklyEntry;
+  document.getElementById('optLev25').checked = userSavedLev25;
+  document.getElementById('optDynLevAggro').checked = userSavedDynLevAggro;
+  // 비중 라디오 복구
+  document.querySelectorAll('input[name="levPctRadio"]').forEach(r => {
+    r.checked = (parseInt(r.value) === userSavedLevPct);
+  });
+  // 옵션 R 복구
+  document.getElementById('optRecoveryMode').checked = userSavedRecoveryMode;
+  document.getElementById('optRecoveryDelay').checked = userSavedRecoveryDelay;
+  document.getElementById('optRecoveryAggressive').checked = userSavedRecoveryAggressive;
+  // 옵션 P 복구
+  document.getElementById('optPullbackMode').checked = userSavedPullbackMode;
+  document.getElementById('optPullbackSafe').checked = userSavedPullbackSafe;
+  document.getElementById('optPullbackLight').checked = userSavedPullbackLight;
+  document.getElementById('optPullbackAggro').checked = userSavedPullbackAggro;
+  document.getElementById('optPullbackLower').checked = userSavedPullbackLower;
+  // 옵션 P (1배) 복구
+  document.getElementById('optPullback1x').checked = userSavedPullback1x;
+  document.getElementById('optPullback1xSafe').checked = userSavedPullback1xSafe;
+  document.getElementById('optPullback1xLight').checked = userSavedPullback1xLight;
+  document.getElementById('optPullback1xAggro').checked = userSavedPullback1xAggro;
+  document.getElementById('optPullback1xLower').checked = userSavedPullback1xLower;
 
   if(wakeLock){ try{ await wakeLock.release(); }catch(e){} }
   SWEEP_RUNNING = false;
