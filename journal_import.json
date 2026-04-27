@@ -1,0 +1,159 @@
+{
+  "settings": {
+    "start": "2026-04-27",
+    "fund": 53152942,
+    "months": 7,
+    "target": 26
+  },
+  "trades": [
+    {
+      "id": 1762000000000,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "TIGER반도체TOP10",
+      "channel": "kr_general",
+      "amount": 3216050,
+      "qty": 90,
+      "price": 35734.0,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유. 시스템 매핑: EEM (신흥국 분류)"
+    },
+    {
+      "id": 1762000000001,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "TIGER조선TOP10",
+      "channel": "kr_general",
+      "amount": 1222533,
+      "qty": 40,
+      "price": 30563.0,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유. 시스템 매핑: EEM (신흥국 분류)"
+    },
+    {
+      "id": 1762000000002,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "TIGER미국테크TOP10",
+      "channel": "kr_general",
+      "amount": 1500600,
+      "qty": 50,
+      "price": 30012.0,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유. 시스템 매핑: QQQ (빅테크 10종)"
+    },
+    {
+      "id": 1762000000003,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "AIQ",
+      "channel": "us",
+      "amount": 7736758,
+      "qty": 100,
+      "price": 52.4526,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유. 시스템 매핑: QQQ (AI ETF)"
+    },
+    {
+      "id": 1762000000004,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "EEM",
+      "channel": "us",
+      "amount": 3768330,
+      "qty": 40,
+      "price": 63.87,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유 (시스템)"
+    },
+    {
+      "id": 1762000000005,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "PDBC",
+      "channel": "us",
+      "amount": 2386845,
+      "qty": 90,
+      "price": 17.98,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유 (시스템, DBC 대체 - K-1 회피)"
+    },
+    {
+      "id": 1762000000006,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "QQQ",
+      "channel": "us",
+      "amount": 6850283,
+      "qty": 7,
+      "price": 663.4657,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유 (시스템)"
+    },
+    {
+      "id": 1762000000007,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "SMH",
+      "channel": "us",
+      "amount": 2247015,
+      "qty": 3,
+      "price": 507.8,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유 (시스템)"
+    },
+    {
+      "id": 1762000000008,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "VNQ",
+      "channel": "us",
+      "amount": 9134519,
+      "qty": 65,
+      "price": 95.2753,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유 (시스템)"
+    },
+    {
+      "id": 1762000000009,
+      "date": "2026-04-27",
+      "action": "buy",
+      "ticker": "SNPS",
+      "channel": "us",
+      "amount": 14012500,
+      "qty": 19,
+      "price": 500.0,
+      "pnl": 0,
+      "days": "",
+      "note": "기존 보유 (시스템 외, 5/27 실적 대기)"
+    }
+  ],
+  "valuations": [
+    {
+      "date": "2026-04-27",
+      "krGen": 6579950,
+      "krIsa": 0,
+      "us": 46572992,
+      "total": 53152942
+    }
+  ],
+  "weekly": [],
+  "targetWeights": {
+    "QQQ": 27,
+    "EEM": 19,
+    "VNQ": 14,
+    "SMH": 5,
+    "PDBC": 5,
+    "TQQQ": 20,
+    "SOXL": 5
+  }
+}

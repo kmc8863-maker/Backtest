@@ -217,9 +217,13 @@ canvas{width:100%!important;height:200px!important;background:var(--s2);border-r
             <option value="URAA">URAA — 우라늄</option>
             <option value="FAS">FAS — 금융 3배</option>
           </optgroup>
-          <optgroup label="한국 ETF (= 미국 매핑)">
+          <optgroup label="한국 ETF (시스템 매핑)">
             <option value="133690">133690 = QQQ (TIGER 미국나스닥100)</option>
             <option value="381180">381180 = SMH (TIGER 미국필반)</option>
+            <option value="TIGER미국테크TOP10">TIGER 미국테크TOP10 = QQQ</option>
+            <option value="TIGER반도체TOP10">TIGER 반도체TOP10 = EEM</option>
+            <option value="TIGER조선TOP10">TIGER 조선TOP10 = EEM</option>
+            <option value="AIQ">AIQ = QQQ (AI ETF, 빅테크)</option>
           </optgroup>
         </select>
       </div>
@@ -349,9 +353,17 @@ canvas{width:100%!important;height:200px!important;background:var(--s2);border-r
 </div>
 
 <script>
-const SYS_1X = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','DBC','EEM','VNQ','REMX','XLF'];
+const SYS_1X = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','DBC','PDBC','EEM','VNQ','REMX','XLF'];
 const SYS_3X = ['TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
-const KR_MAP = {'133690':'QQQ', '381180':'SMH'};
+// 한국 ETF + 시스템 외 ETF → 시스템 종목 매핑 (보유 종목을 시스템 종목으로 자동 합산)
+const KR_MAP = {
+  '133690': 'QQQ',                  // TIGER 미국나스닥100
+  '381180': 'SMH',                  // TIGER 미국필라델피아반도체
+  'TIGER미국테크TOP10': 'QQQ',       // 빅테크 10종 → QQQ 대체
+  'TIGER반도체TOP10': 'EEM',         // 한국 반도체 → 신흥국 분류
+  'TIGER조선TOP10': 'EEM',           // 한국 조선 → 신흥국 분류
+  'AIQ': 'QQQ',                     // AI ETF → QQQ 대체 (빅테크)
+};
 
 function classifyTicker(t){
   if(KR_MAP[t]) return {cat:'sys', base:KR_MAP[t], lev:'1x'};
