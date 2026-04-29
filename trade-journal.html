@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📔 Trade Journal · 7개월 자산운용 테스트</title>
+<style>
+:root{
+  --bg:#0a0e15;--s1:#0f141d;--s2:#161d2a;--bd:rgba(255,255,255,.08);
+  --tx:#cdd6e8;--dm:#5a6478;--wh:#fff;
+  --cy:#00e5cc;--gn:#52d27a;--rd:#ff4060;--yl:#ffc107;--pu:#b57bee;--or:#ff8c42;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--tx);min-height:100vh;
+  font-size:14px;line-height:1.6;padding-bottom:60px;
+}
+.wrap{max-width:920px;margin:0 auto;padding:14px;}
+h1{font-size:1.3rem;color:var(--wh);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.sub{font-size:.75rem;color:var(--dm);margin-bottom:14px;}
+.badge{background:rgba(181,123,238,.15);color:var(--pu);padding:2px 8px;border-radius:4px;font-size:.6rem;font-weight:600;}
+
+.card{
+  background:var(--s1);border:1px solid var(--bd);border-radius:10px;
+  padding:14px;margin-bottom:12px;
+}
+.card-title{
+  font-family:'Space Mono',monospace;font-size:.65rem;letter-spacing:1.5px;
+  color:var(--cy);margin-bottom:10px;
+}
+
+/* 큰 통계 카드 */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+.stat-card{
+  background:var(--s2);border:1px solid var(--bd);border-radius:8px;
+  padding:12px;text-align:center;
+}
+.stat-l{font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
+.stat-v{font-family:'Space Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--wh);}
+.stat-v.gn{color:var(--gn);}
+.stat-v.rd{color:var(--rd);}
+.stat-v.cy{color:var(--cy);}
+.stat-v.yl{color:var(--yl);}
+
+/* D-Day 카운터 */
+.dday{
+  background:linear-gradient(135deg,rgba(181,123,238,.15),rgba(0,229,204,.1));
+  border:2px solid rgba(181,123,238,.4);
+  border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;
+}
+.dday-label{font-size:.6rem;color:var(--dm);letter-spacing:2px;}
+.dday-value{font-family:'Space Mono',monospace;font-size:2.2rem;font-weight:700;color:var(--pu);margin:4px 0;}
+.dday-progress{
+  height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin-top:8px;
+}
+.dday-bar{
+  height:100%;background:linear-gradient(90deg,var(--cy),var(--pu));
+  transition:width .6s ease;
+}
+.dday-text{font-size:.65rem;color:var(--tx);margin-top:6px;}
+
+/* 입력 폼 */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.form-row.full{grid-template-columns:1fr;}
+label{font-size:.6rem;color:var(--dm);letter-spacing:1px;display:block;margin-bottom:3px;text-transform:uppercase;}
+input,select,textarea{
+  width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:6px;
+  color:var(--wh);padding:8px 10px;font-size:.85rem;font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--cy);}
+textarea{resize:vertical;min-height:50px;}
+
+.btn{
+  background:linear-gradient(135deg,var(--cy),#00b8a0);color:#000;font-weight:700;
+  border:none;padding:11px 20px;border-radius:6px;cursor:pointer;font-size:.85rem;
+  font-family:inherit;letter-spacing:.5px;transition:.2s;width:100%;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,204,.3);}
+.btn-sec{background:rgba(255,255,255,.08);color:var(--tx);}
+.btn-sec:hover{background:rgba(255,255,255,.15);box-shadow:none;}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+
+/* 거래 목록 */
+.trade-item{
+  background:var(--s2);border-left:3px solid var(--cy);border-radius:6px;
+  padding:10px 12px;margin-bottom:8px;
+}
+.trade-item.sell{border-left-color:var(--rd);}
+.trade-item.adjust{border-left-color:var(--yl);}
+.trade-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.trade-tk{font-family:'Space Mono',monospace;color:var(--wh);font-weight:600;font-size:.95rem;}
+.trade-action{font-size:.6rem;padding:2px 6px;border-radius:3px;font-weight:600;}
+.trade-action.buy{background:rgba(82,210,122,.15);color:var(--gn);}
+.trade-action.sell{background:rgba(255,64,96,.15);color:var(--rd);}
+.trade-action.adjust{background:rgba(255,193,7,.15);color:var(--yl);}
+.trade-meta{font-size:.65rem;color:var(--dm);font-family:'Space Mono',monospace;}
+.trade-amt{font-family:'Space Mono',monospace;color:var(--wh);font-size:.85rem;}
+.trade-pnl{font-family:'Space Mono',monospace;font-size:.75rem;font-weight:600;}
+.trade-pnl.gn{color:var(--gn);}
+.trade-pnl.rd{color:var(--rd);}
+.trade-note{font-size:.7rem;color:var(--tx);margin-top:5px;font-style:italic;}
+.trade-actions{display:flex;gap:5px;margin-top:6px;}
+.trade-actions button{
+  font-size:.55rem;padding:3px 8px;background:rgba(255,255,255,.05);
+  color:var(--dm);border:1px solid var(--bd);border-radius:3px;cursor:pointer;
+}
+.trade-actions button:hover{background:rgba(255,64,96,.1);color:var(--rd);}
+
+/* 주간 자가평가 */
+.score-row{display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:center;margin-bottom:6px;font-size:.75rem;}
+.score-input{text-align:center;font-family:'Space Mono',monospace;font-weight:700;}
+
+/* 탭 */
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--bd);}
+.tab{
+  flex:1;padding:10px;background:transparent;color:var(--dm);border:none;
+  font-size:.75rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;
+  font-family:inherit;
+}
+.tab.active{color:var(--cy);border-bottom-color:var(--cy);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* 차트 (간단 자산 곡선) */
+.chart-wrap{height:180px;background:var(--s2);border-radius:8px;padding:10px;margin-bottom:12px;}
+canvas{width:100%;height:100%;}
+
+/* 모바일 */
+@media(max-width:600px){
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .form-row{grid-template-columns:1fr;}
+  .btn-row{grid-template-columns:1fr;}
+  
+  /* 트래커 4컬럼 통계 → 2x2 */
+  .tracker-stats-grid{grid-template-columns:1fr 1fr !important;}
+  
+  /* 트래커 표 - 모바일 폰트/패딩 축소 */
+  #trackerHistoryContainer table{font-size:.6rem !important;}
+  #trackerHistoryContainer table th,
+  #trackerHistoryContainer table td{padding:4px 2px !important;vertical-align:middle;}
+  #trackerHistoryContainer table input[type=number]{width:40px !important;font-size:.58rem !important;padding:2px 3px !important;}
+  
+  /* 카드 패딩 축소 */
+  #trackerHistoryContainer > div > div{padding:10px !important;}
+  
+  /* 디테일 행 4컬럼 → 2x2 */
+  .detail-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+  
+  /* 카드 수익 분리 박스 - 가로 유지 (3컬럼은 작아도 OK) */
+  .card-return-grid{grid-template-columns:1fr 1fr 1fr !important;gap:4px !important;}
+  
+  /* 종목 이름 숨김 (티커만 표시) */
+  .ticker-name{display:none !important;}
+  
+  /* 배지(KR, 매핑) 줄바꿈 허용 */
+  #trackerHistoryContainer table td:first-child{white-space:normal;line-height:1.4;}
+  
+  /* 카드 헤더 줄바꿈 */
+  #trackerHistoryContainer .card-header{flex-direction:column !important;align-items:flex-start !important;}
+  
+  /* 카드 합계/현금 그리드 */
+  .card-summary-grid{grid-template-columns:1fr 1fr 1fr !important;gap:4px !important;}
+  
+  /* ETC 추가 폼 줄바꿈 */
+  .etc-add-form{flex-direction:column !important;align-items:stretch !important;}
+}
+
+.empty{text-align:center;color:var(--dm);padding:30px;font-size:.8rem;}
+hr{border:none;border-top:1px solid var(--bd);margin:14px 0;}
+.note{font-size:.65rem;color:var(--dm);background:var(--s2);padding:8px 10px;border-radius:6px;margin-top:8px;line-height:1.5;}
+.warn{color:var(--yl);}
+.section-h{font-size:.75rem;color:var(--cy);margin:14px 0 8px;font-weight:600;letter-spacing:.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>📔 Trade Journal <span class="badge">v1.0</span></h1>
+<div class="sub">7개월 자산운용 테스트 기록 · 거래/심리/자가평가</div>
+
+<!-- D-Day -->
+<div class="dday">
+  <div class="dday-label">7개월 테스트</div>
+  <div class="dday-value" id="ddayValue">--</div>
+  <div class="dday-text" id="ddayText">시작일 설정 필요</div>
+  <div class="dday-progress"><div class="dday-bar" id="ddayBar" style="width:0%"></div></div>
+</div>
+
+<!-- 핵심 통계 -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-l">시작 자금</div>
+    <div class="stat-v cy" id="statStart">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">현재 평가액</div>
+    <div class="stat-v" id="statCurrent">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">누적 수익률</div>
+    <div class="stat-v" id="statReturn">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">실현 손익</div>
+    <div class="stat-v" id="statPnl">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">거래 횟수</div>
+    <div class="stat-v" id="statTrades">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-l">승률</div>
+    <div class="stat-v" id="statWin">--</div>
+  </div>
+</div>
+
+<!-- 탭 -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('tracker')">📅 주간 추적</button>
+  <button class="tab" onclick="showTab('add')">+ 거래 추가</button>
+  <button class="tab" onclick="showTab('list')">거래 목록</button>
+  <button class="tab" onclick="showTab('weekly')">주간 평가</button>
+  <button class="tab" onclick="showTab('settings')">설정</button>
+</div>
+
+<!-- 📅 주간 추적 탭 (트래커 자동 연동) -->
+<div class="tab-content active" id="tab-tracker">
+  <div class="card">
+    <div class="card-title">📅 주간 매매 추적 (트래커 자동 연동)</div>
+    <div style="font-size:.7rem;color:var(--dm);line-height:1.6;margin-bottom:12px;">
+      💡 트래커에서 SCAN 누르면 자동 저장됨 → 매주 권장 vs 실제 비교 + 누적 수익률 추적<br>
+      ✓ 매주 토요일 권장 리스트 자동 표시<br>
+      ✓ 실제 매수 비중 입력 → 차이 계산<br>
+      ✓ 다음주에 실제 수익률 평가
+    </div>
+    
+    <!-- 📥 portfolio.json import -->
+    <div style="margin-bottom:14px;padding:12px;background:linear-gradient(135deg,rgba(0,229,118,.06),rgba(0,212,255,.04));border-radius:8px;border:1px solid rgba(0,229,118,.3);">
+      <div style="font-size:.65rem;color:var(--gn);font-weight:700;margin-bottom:8px;letter-spacing:1px;">
+        📥 portfolio.json 자동 가져오기
+      </div>
+      <div style="font-size:.6rem;color:var(--dm);line-height:1.5;margin-bottom:8px;">
+        실제 보유 포트폴리오를 JSON으로 업로드 → 이번 주 actual에 자동 반영<br>
+        ✓ 비중 자동 계산 (총자산 기준)<br>
+        ✓ 평균 매수가 + 환율 자동 입력<br>
+        ✓ 워치리스트 종목 → 워치리스트 / 외 종목 → ETC 자동 분류
+      </div>
+      <input type="file" id="portfolioJsonFile" accept=".json" style="display:none;" onchange="importPortfolioJson(event)">
+      <button onclick="document.getElementById('portfolioJsonFile').click()" 
+        style="background:linear-gradient(135deg,rgba(0,229,118,.15),rgba(0,212,255,.1));border:1px solid rgba(0,229,118,.4);color:var(--gn);padding:8px 14px;border-radius:6px;font-size:.7rem;cursor:pointer;font-weight:700;width:100%;">
+        📁 portfolio.json 파일 선택
+      </button>
+    </div>
+    
+    <div id="trackerHistoryContainer">
+      <div style="text-align:center;padding:30px;color:var(--dm);font-size:.75rem;">
+        📭 데이터 없음<br>
+        <span style="font-size:.65rem;color:var(--dm);margin-top:6px;display:inline-block;">
+          트래커(trend-tracker.html)에서 SCAN ALL STOCKS 클릭하면 자동 저장됩니다
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 거래 추가 탭 -->
+<div class="tab-content" id="tab-add">
+  <div class="card">
+    <div class="card-title">📝 새 거래 입력</div>
+    <div class="form-row">
+      <div>
+        <label>날짜</label>
+        <input type="date" id="tDate">
+      </div>
+      <div>
+        <label>구분</label>
+        <select id="tAction">
+          <option value="buy">매수 (Buy)</option>
+          <option value="sell">매도 (Sell)</option>
+          <option value="adjust">비중 조정 (Adjust)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>티커</label>
+        <input type="text" id="tTicker" placeholder="예: QQQ" style="text-transform:uppercase">
+      </div>
+      <div>
+        <label>채널</label>
+        <select id="tChannel">
+          <option value="domestic">🇰🇷 국내 (TIGER)</option>
+          <option value="us">🇺🇸 미국 직투</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>금액 (원)</label>
+        <input type="number" id="tAmount" placeholder="1000000" step="10000">
+      </div>
+      <div>
+        <label>가격</label>
+        <input type="number" id="tPrice" placeholder="500.00" step="0.01">
+      </div>
+    </div>
+    <div class="form-row" id="pnlRow" style="display:none">
+      <div>
+        <label>실현 손익 (매도 시)</label>
+        <input type="number" id="tPnl" placeholder="50000 또는 -30000">
+      </div>
+      <div>
+        <label>보유 기간</label>
+        <input type="text" id="tDays" placeholder="예: 4주">
+      </div>
+    </div>
+    <div class="form-row full">
+      <div>
+        <label>매매 사유 / 신호</label>
+        <textarea id="tNote" placeholder="예: STRONG 신호 + 1위 비중 30% 진입"></textarea>
+      </div>
+    </div>
+    <button class="btn" onclick="addTrade()">💾 거래 기록 저장</button>
+  </div>
+
+  <!-- 빠른 자산 업데이트 -->
+  <div class="card">
+    <div class="card-title">💰 현재 평가액 업데이트 (매주 토요일)</div>
+    <div class="form-row">
+      <div>
+        <label>국내 계좌 평가액</label>
+        <input type="number" id="vDomestic" placeholder="20000000">
+      </div>
+      <div>
+        <label>미국 계좌 평가액</label>
+        <input type="number" id="vUs" placeholder="40000000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>현금 잔고</label>
+        <input type="number" id="vCash" placeholder="10000000">
+      </div>
+      <div>
+        <label>날짜</label>
+        <input type="date" id="vDate">
+      </div>
+    </div>
+    <button class="btn btn-sec" onclick="updateValuation()">📈 평가액 업데이트</button>
+    <div class="note">매주 토요일 시그널 스캔 후 같이 기록하면 7개월 후 자산 곡선이 만들어집니다.</div>
+  </div>
+</div>
+
+<!-- 거래 목록 탭 -->
+<div class="tab-content" id="tab-list">
+  <div class="card">
+    <div class="card-title">📊 자산 곡선</div>
+    <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 모든 거래 기록</div>
+    <div id="tradeList"></div>
+  </div>
+</div>
+
+<!-- 주간 평가 탭 -->
+<div class="tab-content" id="tab-weekly">
+  <div class="card">
+    <div class="card-title">📊 이번 주 자가평가 (100점 만점)</div>
+    <div class="form-row">
+      <div>
+        <label>주차</label>
+        <input type="text" id="wWeek" placeholder="예: 2026-W18">
+      </div>
+      <div>
+        <label>평가 날짜</label>
+        <input type="date" id="wDate">
+      </div>
+    </div>
+
+    <div class="section-h">규칙 준수도 (각 20점)</div>
+    <div class="score-row"><span>① 매주 신호 스캔 했는가?</span><input type="number" class="score-input" id="s1" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>② 신호대로 매매했는가?</span><input type="number" class="score-input" id="s2" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>③ EMA 이탈 시 청산 지켰는가?</span><input type="number" class="score-input" id="s3" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>④ 감정적 매매 없었는가?</span><input type="number" class="score-input" id="s4" min="0" max="20" placeholder="0-20"></div>
+    <div class="score-row"><span>⑤ 손실 견딘 능력?</span><input type="number" class="score-input" id="s5" min="0" max="20" placeholder="0-20"></div>
+
+    <div class="form-row full">
+      <div>
+        <label>이번 주 메모 (배운 점, 실수, 다짐)</label>
+        <textarea id="wNote" placeholder="예: 2025-04-27. URA 신호 발생했지만 머뭇거리다 늦게 진입. 다음엔 신호 즉시 행동."></textarea>
+      </div>
+    </div>
+    <button class="btn" onclick="addWeekly()">💾 주간 평가 저장</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📈 주간 평가 이력</div>
+    <div id="weeklyList"></div>
+  </div>
+</div>
+
+<!-- 설정 탭 -->
+<div class="tab-content" id="tab-settings">
+  <div class="card">
+    <div class="card-title">⚙️ 테스트 설정</div>
+    <div class="form-row">
+      <div>
+        <label>시작 날짜</label>
+        <input type="date" id="cStart">
+      </div>
+      <div>
+        <label>시작 자금 (원)</label>
+        <input type="number" id="cFund" placeholder="50000000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>테스트 기간 (개월)</label>
+        <input type="number" id="cMonths" value="7" min="1" max="60">
+      </div>
+      <div>
+        <label>목표 CAGR (%)</label>
+        <input type="number" id="cTarget" value="20" placeholder="20">
+      </div>
+    </div>
+    <button class="btn" onclick="saveSettings()">💾 설정 저장</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📤 데이터 백업/복원</div>
+    <div class="btn-row">
+      <button class="btn btn-sec" onclick="exportData()">📥 JSON 내보내기</button>
+      <button class="btn btn-sec" onclick="document.getElementById('importFile').click()">📤 JSON 불러오기</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <div class="note" style="font-size:.6rem;color:var(--dm);margin-top:8px;line-height:1.6;">
+      💡 <strong>두 가지 형식 자동 감지:</strong><br>
+      • <strong>저널 데이터</strong> (settings/trades/...) → 거래 기록 복원<br>
+      • <strong>portfolio.json</strong> (보유 포트폴리오) → 주간 추적 actual에 반영
+    </div>
+    <div class="note warn">⚠️ 브라우저 캐시 삭제 시 데이터 사라짐 · 정기적으로 JSON 백업하세요.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗑️ 위험 영역</div>
+    <button class="btn btn-sec" onclick="resetAll()" style="background:rgba(255,64,96,.15);color:var(--rd)">⚠️ 모든 데이터 초기화</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ===== 데이터 관리 =====
+const KEY = 'trade_journal_v1';
+
+function loadData(){
+  const raw = localStorage.getItem(KEY);
+  if(!raw) return {settings:{}, trades:[], valuations:[], weekly:[]};
+  try{ return JSON.parse(raw); }
+  catch(e){ return {settings:{}, trades:[], valuations:[], weekly:[]}; }
+}
+
+function saveData(data){
+  localStorage.setItem(KEY, JSON.stringify(data));
+}
+
+let DATA = loadData();
+
+// ===== 탭 전환 =====
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='list'){ renderTrades(); drawEquity(); }
+  if(name==='weekly') renderWeekly();
+  if(name==='tracker') renderTrackerHistory();
+}
+
+// ===== 📅 주간 추적 (트래커 자동 연동) =====
+const TRACKER_KEY = 'tracker_to_journal_v1';
+
+function loadTrackerHistory(){
+  try {
+    const raw = localStorage.getItem(TRACKER_KEY);
+    if(!raw) return [];
+    return JSON.parse(raw);
+  } catch(e){
+    console.error('트래커 히스토리 로드 실패:', e);
+    return [];
+  }
+}
+
+function saveTrackerHistory(history){
+  try {
+    localStorage.setItem(TRACKER_KEY, JSON.stringify(history));
+  } catch(e){
+    console.error('트래커 히스토리 저장 실패:', e);
+  }
+}
+
+// 💵 항목 수익 분리 계산
+// returns: {hasData, usdReturn, fxReturn, krwReturn} 또는 null
+function calculateItemReturn(item){
+  const buyP = parseFloat(item.buyPriceUSD) || 0;
+  const curP = parseFloat(item.currentPriceUSD) || 0;
+  const buyFx = parseFloat(item.buyFxRate) || 0;
+  const curFx = parseFloat(item.currentFxRate) || 0;
+  
+  // 매수 정보 X면 계산 X
+  if(buyP <= 0 || buyFx <= 0) return {hasData: false};
+  
+  // 평가 정보 X면 매수가/환율 그대로 (수익 0)
+  const finalP = curP > 0 ? curP : buyP;
+  const finalFx = curFx > 0 ? curFx : buyFx;
+  
+  const usdReturn = (finalP - buyP) / buyP;       // 종목 수익 (USD)
+  const fxReturn = (finalFx - buyFx) / buyFx;     // 환차익 (KRW)
+  const krwReturn = (1 + usdReturn) * (1 + fxReturn) - 1;  // 종합 (KRW)
+  
+  return {
+    hasData: true,
+    usdReturn, fxReturn, krwReturn,
+    buyP, curP: finalP, buyFx, curFx: finalFx,
+  };
+}
+
+// 카드별 가중 평균 수익 (비중 가중)
+function calculateCardReturn(actual){
+  let totalWeight = 0;
+  let weightedUsd = 0;
+  let weightedFx = 0;
+  let weightedKrw = 0;
+  let hasAnyData = false;
+  
+  actual.forEach(item => {
+    const r = calculateItemReturn(item);
+    if(!r.hasData) return;
+    const w = parseFloat(item.weight) || 0;
+    if(w <= 0) return;
+    
+    hasAnyData = true;
+    totalWeight += w;
+    weightedUsd += r.usdReturn * w;
+    weightedFx += r.fxReturn * w;
+    weightedKrw += r.krwReturn * w;
+  });
+  
+  if(!hasAnyData || totalWeight === 0) return null;
+  
+  return {
+    usdReturn: weightedUsd / totalWeight,
+    fxReturn: weightedFx / totalWeight,
+    krwReturn: weightedKrw / totalWeight,
+    coverage: totalWeight,  // 데이터 있는 비중 합계
+  };
+}
+
+function renderTrackerHistory(){
+  const history = loadTrackerHistory();
+  const container = document.getElementById('trackerHistoryContainer');
+  
+  if(history.length === 0){
+    container.innerHTML = `
+      <div style="text-align:center;padding:30px;color:var(--dm);font-size:.75rem;">
+        📭 데이터 없음<br>
+        <span style="font-size:.65rem;color:var(--dm);margin-top:6px;display:inline-block;">
+          트래커(trend-tracker.html)에서 SCAN ALL STOCKS 클릭하면 자동 저장됩니다
+        </span>
+      </div>
+    `;
+    return;
+  }
+  
+  // 시간 역순 (최신 위)
+  const sorted = [...history].reverse();
+  
+  // 💵 누적 수익 계산 (USD + KRW + 환차익)
+  let cumUsd = 0;
+  let cumFx = 0;
+  let cumKrw = 0;
+  let weeksWithData = 0;
+  
+  for(const entry of history){
+    const r = calculateCardReturn(entry.actual || []);
+    if(r){
+      cumUsd += r.usdReturn;
+      cumFx += r.fxReturn;
+      cumKrw += r.krwReturn;
+      weeksWithData++;
+    }
+  }
+  
+  // 💰 가장 최근 entry의 평가금 (quantity 기반 정확 계산)
+  let totalCostKRW = 0;     // 총 매수원금 KRW
+  let totalEvalKRW = 0;     // 총 평가금 KRW (현재가/환율 기준)
+  let portfolioTotalKRW = 0; // portfolio.json import 시 grand_total_krw
+  let totalUsdProfit = 0;   // 종목 수익 USD
+  let totalFxProfit = 0;    // 환차익 KRW
+  let hasAnyEval = false;
+  
+  if(sorted.length > 0){
+    const latest = sorted[0];
+    portfolioTotalKRW = latest.portfolioMeta?.totalKRW || 0;
+    
+    (latest.actual || []).forEach(item => {
+      const qty = parseFloat(item.quantity) || 0;
+      const buyP = parseFloat(item.buyPriceUSD) || 0;
+      const buyFx = parseFloat(item.buyFxRate) || 0;
+      const curP = parseFloat(item.currentPriceUSD) || buyP;
+      const curFx = parseFloat(item.currentFxRate) || buyFx;
+      const costKRW = parseFloat(item.totalCostKRW) || 0;
+      
+      if(qty > 0 && buyP > 0 && buyFx > 0){
+        // 정확한 평가금 (quantity × 현재가 × 현재환율)
+        const baseKRW = costKRW || (qty * buyP * buyFx);
+        const evalKRW = qty * curP * curFx;
+        totalCostKRW += baseKRW;
+        totalEvalKRW += evalKRW;
+        
+        // 종목 수익 USD (quantity × (현재가 - 매수가))
+        totalUsdProfit += qty * (curP - buyP);
+        
+        // 환차익 KRW (qty × 매수가 × (현재환율 - 매수환율))
+        totalFxProfit += qty * buyP * (curFx - buyFx);
+        
+        if(curP !== buyP || curFx !== buyFx) hasAnyEval = true;
+      }
+    });
+  }
+  
+  // 평가가 있으면 진짜 평가금, 없으면 매수원금
+  const displayTotal = totalEvalKRW > 0 ? totalEvalKRW : (portfolioTotalKRW || totalCostKRW);
+  const profitKRW = totalEvalKRW - totalCostKRW;
+  const profitPct = totalCostKRW > 0 ? (profitKRW / totalCostKRW * 100) : 0;
+  
+  // 매수 환율 평균 (가중)
+  const avgBuyFx = totalCostKRW > 0 && totalUsdProfit !== undefined ? 
+    (totalCostKRW / Math.max(1, totalCostKRW / 1485)) : 1485;
+  
+  let html = '';
+  
+  // 💰 평가금 박스 (portfolio 메타 또는 계산값)
+  if(displayTotal > 0){
+    const totalKRWStr = displayTotal.toLocaleString('ko-KR');
+    const totalUSDStr = (totalEvalKRW > 0 ? (totalEvalKRW / (sorted[0]?.portfolioMeta?.fxRate || 1485)) : 0)
+      .toLocaleString('en-US', {maximumFractionDigits: 0});
+    const profitColor = profitKRW >= 0 ? 'var(--gn)' : 'var(--rd)';
+    
+    html += `
+      <div style="padding:14px;background:linear-gradient(135deg,rgba(0,229,118,.06),rgba(0,212,255,.04));border-radius:8px;margin-bottom:12px;border:1px solid rgba(0,229,118,.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-bottom:2px;">💰 총 평가금 (최신 entry)</div>
+            <div style="font-size:1.3rem;color:var(--gn);font-weight:700;font-family:monospace;">${totalKRWStr}원</div>
+            ${totalEvalKRW > 0 ? `<div style="font-size:.55rem;color:var(--dm);">≈ $${totalUSDStr} (현재 환율 ${(sorted[0]?.portfolioMeta?.fxRate || 1485)}원)</div>` : ''}
+          </div>
+          ${hasAnyEval ? `
+            <div style="text-align:right;">
+              <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-bottom:2px;">평가손익</div>
+              <div style="font-size:1.1rem;color:${profitColor};font-weight:700;font-family:monospace;">${profitKRW >= 0 ? '+' : ''}${profitKRW.toLocaleString('ko-KR', {maximumFractionDigits: 0})}원</div>
+              <div style="font-size:.65rem;color:${profitColor};font-family:monospace;">${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%</div>
+            </div>
+          ` : `
+            <div style="font-size:.55rem;color:var(--dm);text-align:right;">
+              💡 [💵] 클릭 → 현재가/환율 입력 시<br>실제 평가금 + 손익 표시
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  }
+  
+  // 누적 통계
+  html += `
+    <div class="tracker-stats-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="padding:10px;background:rgba(0,212,255,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">총 추적 주</div>
+        <div style="font-size:1.2rem;color:var(--cy);font-weight:700;font-family:monospace;">${history.length}</div>
+        <div style="font-size:.5rem;color:var(--dm);margin-top:2px;">평가 ${weeksWithData}주</div>
+      </div>
+      <div style="padding:10px;background:rgba(0,229,118,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">종목 누적 (USD)</div>
+        <div style="font-size:1.1rem;color:var(--gn);font-weight:700;font-family:monospace;">${cumUsd >= 0 ? '+' : ''}${(cumUsd*100).toFixed(2)}%</div>
+      </div>
+      <div style="padding:10px;background:rgba(255,193,7,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">환차익 누적</div>
+        <div style="font-size:1.1rem;color:var(--yl);font-weight:700;font-family:monospace;">${cumFx >= 0 ? '+' : ''}${(cumFx*100).toFixed(2)}%</div>
+      </div>
+      <div style="padding:10px;background:rgba(255,140,66,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">종합 누적 (KRW)</div>
+        <div style="font-size:1.2rem;color:var(--or);font-weight:700;font-family:monospace;">${cumKrw >= 0 ? '+' : ''}${(cumKrw*100).toFixed(2)}%</div>
+      </div>
+    </div>
+  `;
+  
+  // 각 주별 카드
+  sorted.forEach((entry, idx) => {
+    const recommended = entry.recommended || [];
+    const actual = entry.actual || [];
+    const result = entry.weekResult;
+    
+    const recMap = {};
+    recommended.forEach(r => recMap[r.ticker] = r);
+    const actualMap = {};
+    actual.forEach(a => actualMap[a.ticker] = a);
+    
+    // ⭐ 워치리스트 고정 순서 (1배 10종 + 3배 6종 = 16종)
+    const WATCHLIST_1X = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','VNQ','XLF'];
+    const WATCHLIST_3X = ['TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+    const WATCHLIST_ALL = [...WATCHLIST_1X, ...WATCHLIST_3X];
+    const WATCHLIST_SET = new Set(WATCHLIST_ALL);
+    
+    // ETC: actual 중 워치리스트에 없는 종목 (사용자가 추가한 것)
+    const etcTickers = actual
+      .filter(a => !WATCHLIST_SET.has(a.ticker))
+      .map(a => a.ticker);
+    
+    // 💵 카드별 수익 분리 계산
+    const cardReturn = calculateCardReturn(actual);
+    
+    html += `
+      <div style="margin-bottom:14px;padding:14px;background:rgba(35,46,66,.5);border-radius:8px;border:1px solid rgba(0,212,255,.2);">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:6px;flex-wrap:wrap;">
+          <div>
+            <span style="font-size:.85rem;color:var(--cy);font-weight:700;font-family:monospace;">📅 ${entry.weekDate}</span>
+            <span style="font-size:.62rem;color:var(--dm);margin-left:8px;">
+              ${entry.spyState === 'bull' ? '🟢 BULL' : entry.spyState === 'bear' ? '🔴 BEAR' : '🟡 NEUTRAL'}
+              ${entry.monthlyOk ? '· 월봉 OK' : '· 월봉 X'}
+            </span>
+          </div>
+          <button onclick="deleteTrackerEntry(${history.length - 1 - idx})" style="background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.3);color:var(--rd);font-size:.55rem;padding:4px 8px;border-radius:4px;cursor:pointer;">🗑️</button>
+        </div>
+    `;
+    
+    // 💵 카드별 수익 분리 박스 (데이터 있을 때만)
+    if(cardReturn){
+      html += `
+        <div style="margin-bottom:10px;padding:10px;background:linear-gradient(135deg,rgba(0,229,118,.06),rgba(255,140,66,.04));border-radius:6px;border:1px solid rgba(0,229,118,.2);">
+          <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-bottom:6px;">💵 이번 주 수익 분리 (가중 평균, 평가 비중 ${cardReturn.coverage.toFixed(0)}%)</div>
+          <div class="card-return-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div>
+              <div style="font-size:.55rem;color:var(--gn);">종목 (USD)</div>
+              <div style="font-size:.95rem;color:var(--gn);font-weight:700;font-family:monospace;">${cardReturn.usdReturn >= 0 ? '+' : ''}${(cardReturn.usdReturn*100).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div style="font-size:.55rem;color:var(--yl);">환차익</div>
+              <div style="font-size:.95rem;color:var(--yl);font-weight:700;font-family:monospace;">${cardReturn.fxReturn >= 0 ? '+' : ''}${(cardReturn.fxReturn*100).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div style="font-size:.55rem;color:var(--or);">종합 (KRW)</div>
+              <div style="font-size:.95rem;color:var(--or);font-weight:700;font-family:monospace;">${cardReturn.krwReturn >= 0 ? '+' : ''}${(cardReturn.krwReturn*100).toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="margin-bottom:10px;padding:8px;background:rgba(180,180,180,.05);border-radius:6px;border:1px dashed rgba(180,180,180,.2);">
+          <div style="font-size:.55rem;color:var(--dm);text-align:center;">
+            💡 종목별 [💵] 버튼 클릭 → 매수가/환율 입력 시 수익 분리 표시
+          </div>
+        </div>
+      `;
+    }
+    
+    html += `
+        <table style="width:100%;font-size:.65rem;color:var(--tx);border-collapse:collapse;">
+          <thead><tr style="border-bottom:1px solid rgba(0,212,255,.2);color:var(--cy);">
+            <th style="text-align:left;padding:6px 4px;">종목</th>
+            <th style="text-align:right;padding:6px 4px;">권장</th>
+            <th style="text-align:right;padding:6px 4px;">실제</th>
+            <th style="text-align:right;padding:6px 4px;">차이</th>
+          </tr></thead>
+          <tbody>
+    `;
+    
+    // 1배 ETF 섹션
+    html += `<tr><td colspan="4" style="padding:6px 4px 3px 4px;font-size:.55rem;color:var(--cy);letter-spacing:1px;border-bottom:1px solid rgba(0,212,255,.1);">━━ 1배 ETF (워치리스트 ${WATCHLIST_1X.length}종) ━━</td></tr>`;
+    
+    WATCHLIST_1X.forEach(ticker => {
+      const rec = recMap[ticker];
+      const act = actualMap[ticker];
+      const recW = rec?.weight || 0;
+      const actW = act?.weight || 0;
+      const diff = actW - recW;
+      const name = rec?.name || '';
+      const detailKey = `${entry.weekDate}_${ticker}`;
+      const r = act ? calculateItemReturn(act) : {hasData: false};
+      const hasDetail = act && act.buyPriceUSD;
+      const hasKR = act && act.hasKR;
+      const krW = act?.krWeight || 0;
+      const usW = actW - krW;  // 미장 부분
+      const mappedFrom = act?.mappedFrom || [];  // 자동 매핑된 종목들
+      
+      let mappedHtml = '';
+      if(mappedFrom.length > 0){
+        const mappedNames = mappedFrom.map(m => `${m.ticker}(${m.weight.toFixed(1)}%)`).join('+');
+        mappedHtml = `<span style="margin-left:4px;color:var(--pu);font-size:.55rem;background:rgba(181,123,238,.1);padding:1px 5px;border-radius:3px;" title="자동 매핑: ${mappedFrom.map(m => m.name).join(', ')}">🔗 ${mappedNames}</span>`;
+      }
+      
+      html += `
+        <tr style="border-bottom:1px solid rgba(0,212,255,.05);">
+          <td style="padding:5px 4px;">
+            <span style="color:var(--tx);font-family:monospace;">${ticker}</span>
+            ${name ? `<span class="ticker-name" style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
+            ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
+            ${hasKR ? `<span style="margin-left:4px;color:var(--cy);font-size:.55rem;background:rgba(0,212,255,.1);padding:1px 5px;border-radius:3px;" title="${act.krName || ''}">🇰🇷 ${krW.toFixed(1)}%</span>` : ''}
+            ${mappedHtml}
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW.toFixed(1)}%</td>
+          <td style="padding:5px 4px;text-align:right;">
+            <input type="number" value="${actW.toFixed(1)}" min="0" max="100" step="0.1"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, false, '')"
+              style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
+            <span style="color:var(--dm);font-size:.55rem;">%</span>
+            ${hasKR ? `<div style="font-size:.5rem;color:var(--dm);margin-top:1px;">🇺🇸${usW.toFixed(1)}+🇰🇷${krW.toFixed(1)}</div>` : ''}
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
+            ${Math.abs(diff) >= 0.05 ? (diff > 0 ? '+' : '') + diff.toFixed(1) + '%' : '-'}
+          </td>
+        </tr>
+        ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, false, '') : ''}
+      `;
+    });
+    
+    // 3배 ETF 섹션
+    html += `<tr><td colspan="4" style="padding:8px 4px 3px 4px;font-size:.55rem;color:var(--rd);letter-spacing:1px;border-bottom:1px solid rgba(255,68,85,.1);">━━ 3배 ETF (워치리스트 ${WATCHLIST_3X.length}종) ━━</td></tr>`;
+    
+    WATCHLIST_3X.forEach(ticker => {
+      const rec = recMap[ticker];
+      const act = actualMap[ticker];
+      const recW = rec?.weight || 0;
+      const actW = act?.weight || 0;
+      const diff = actW - recW;
+      const baseTicker = rec?.baseTicker || '';
+      const name = rec?.name || '';
+      const detailKey = `${entry.weekDate}_${ticker}`;
+      const hasDetail = act && act.buyPriceUSD;
+      
+      html += `
+        <tr style="border-bottom:1px solid rgba(255,68,85,.05);">
+          <td style="padding:5px 4px;">
+            <span style="color:var(--rd);font-weight:700;font-family:monospace;">${ticker} ⚡</span>
+            ${name ? `<span class="ticker-name" style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
+            ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW.toFixed(1)}%</td>
+          <td style="padding:5px 4px;text-align:right;">
+            <input type="number" value="${actW.toFixed(1)}" min="0" max="100" step="0.1"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, true, '${baseTicker}')"
+              style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
+            <span style="color:var(--dm);font-size:.55rem;">%</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
+            ${Math.abs(diff) >= 0.05 ? (diff > 0 ? '+' : '') + diff.toFixed(1) + '%' : '-'}
+          </td>
+        </tr>
+        ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, true, baseTicker) : ''}
+      `;
+    });
+    
+    // ETC 섹션 - 워치리스트 외 종목 (사용자 직접 추가)
+    html += `<tr><td colspan="4" style="padding:8px 4px 3px 4px;font-size:.55rem;color:var(--yl);letter-spacing:1px;border-bottom:1px solid rgba(255,193,7,.1);">━━ ETC (워치리스트 외 - 직접 추가) ━━</td></tr>`;
+    
+    etcTickers.forEach(ticker => {
+      const act = actualMap[ticker];
+      const actW = act?.weight || 0;
+      const isLev = act?.type === '3x';
+      const detailKey = `${entry.weekDate}_${ticker}`;
+      const hasDetail = act && act.buyPriceUSD;
+      
+      html += `
+        <tr style="border-bottom:1px solid rgba(255,193,7,.05);">
+          <td style="padding:5px 4px;">
+            <span style="color:${isLev ? 'var(--rd)' : 'var(--yl)'};font-weight:${isLev ? '700' : '400'};font-family:monospace;">${ticker}${isLev ? ' ⚡' : ''}</span>
+            <span style="color:var(--dm);font-size:.55rem;margin-left:4px;">(직접 추가)</span>
+            ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
+          <td style="padding:5px 4px;text-align:right;">
+            <input type="number" value="${actW.toFixed(1)}" min="0" max="100" step="0.1"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, ${isLev}, '')"
+              style="width:50px;background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.3);color:var(--yl);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
+            <span style="color:var(--dm);font-size:.55rem;">%</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
+        </tr>
+        ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, isLev, '') : ''}
+      `;
+    });
+    
+    // ETC 추가 입력 행 (새 종목 직접 입력)
+    html += `
+      <tr>
+        <td colspan="4" style="padding:6px 4px;">
+          <div class="etc-add-form" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="etcTicker_${entry.weekDate}" placeholder="종목 (예: SCHD, JEPI)" 
+              style="flex:1;background:rgba(255,193,7,.05);border:1px solid rgba(255,193,7,.2);color:var(--yl);padding:4px 6px;border-radius:3px;font-size:.6rem;font-family:monospace;text-transform:uppercase;">
+            <input type="number" id="etcWeight_${entry.weekDate}" placeholder="비중%" min="0" max="100" step="1"
+              style="width:60px;background:rgba(255,193,7,.05);border:1px solid rgba(255,193,7,.2);color:var(--yl);padding:4px 6px;border-radius:3px;font-size:.6rem;font-family:monospace;text-align:right;">
+            <select id="etcType_${entry.weekDate}" style="background:rgba(255,193,7,.05);border:1px solid rgba(255,193,7,.2);color:var(--yl);padding:4px 6px;border-radius:3px;font-size:.6rem;font-family:monospace;">
+              <option value="1x">1배</option>
+              <option value="3x">3배 ⚡</option>
+            </select>
+            <button onclick="addEtcTicker('${entry.weekDate}')" style="background:rgba(255,193,7,.15);border:1px solid rgba(255,193,7,.4);color:var(--yl);padding:4px 10px;border-radius:3px;font-size:.6rem;cursor:pointer;font-family:monospace;font-weight:700;">+ 추가</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    
+    html += `</tbody></table>`;
+    
+    // 합계 + 현금
+    const totalRec = recommended.reduce((s,r) => s + r.weight, 0);
+    const totalAct = actual.reduce((s,a) => s + a.weight, 0);
+    const cash1xRec = Math.max(0, 100 - totalRec);
+    const cash1xAct = Math.max(0, 100 - totalAct);
+    
+    html += `
+      <div class="card-summary-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:.6rem;padding-top:8px;border-top:1px dashed rgba(0,212,255,.2);margin-top:8px;">
+        <div style="text-align:center;">
+          <div style="color:var(--dm);font-size:.55rem;">합계</div>
+          <div style="color:var(--cy);font-family:monospace;">권장 ${totalRec}% · 실제 ${totalAct}%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:var(--dm);font-size:.55rem;">현금 (권장)</div>
+          <div style="color:${cash1xRec > 50 ? 'var(--yl)' : 'var(--gn)'};font-family:monospace;">${cash1xRec}%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:var(--dm);font-size:.55rem;">현금 (실제)</div>
+          <div style="color:${cash1xAct > 50 ? 'var(--yl)' : 'var(--gn)'};font-family:monospace;">${cash1xAct}%</div>
+        </div>
+      </div>
+    `;
+    
+    // 결과 (있으면)
+    if(result){
+      const sysRet = (result.sysReturn || 0) * 100;
+      const actRet = (result.actualReturn || 0) * 100;
+      const diff = actRet - sysRet;
+      html += `
+        <div style="margin-top:10px;padding:8px;background:rgba(0,229,118,.04);border-radius:4px;font-size:.62rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div><span style="color:var(--dm);">시스템</span><br><span style="color:var(--gn);font-weight:700;font-family:monospace;">${sysRet >= 0 ? '+' : ''}${sysRet.toFixed(2)}%</span></div>
+            <div><span style="color:var(--dm);">실제</span><br><span style="color:var(--or);font-weight:700;font-family:monospace;">${actRet >= 0 ? '+' : ''}${actRet.toFixed(2)}%</span></div>
+            <div><span style="color:var(--dm);">차이</span><br><span style="color:${diff >= 0 ? 'var(--cy)' : 'var(--rd)'};font-weight:700;font-family:monospace;">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%p</span></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    html += `</div>`;
+  });
+  
+  container.innerHTML = html;
+}
+
+function updateActualWeight(weekDate, ticker, weight, isLev, baseTicker){
+  const w = parseFloat(weight) || 0;
+  let history = loadTrackerHistory();
+  const idx = history.findIndex(h => h.weekDate === weekDate);
+  if(idx < 0) return;
+  
+  const entry = history[idx];
+  if(!entry.actual) entry.actual = [];
+  
+  const existingIdx = entry.actual.findIndex(a => a.ticker === ticker);
+  if(w > 0){
+    // 기존 데이터 보존 (buyPriceUSD, buyFxRate 등)
+    const existing = existingIdx >= 0 ? entry.actual[existingIdx] : {};
+    const data = {
+      ...existing,    // 기존 보존
+      ticker,
+      weight: w,
+      type: isLev ? '3x' : '1x',
+    };
+    if(baseTicker) data.baseTicker = baseTicker;
+    
+    if(existingIdx >= 0) entry.actual[existingIdx] = data;
+    else entry.actual.push(data);
+  } else {
+    // 0이면 제거
+    if(existingIdx >= 0) entry.actual.splice(existingIdx, 1);
+  }
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+}
+
+// 💵 매수/현재 가격/환율 디테일 입력 행 렌더링
+function renderDetailRow(weekDate, ticker, item, isLev, baseTicker){
+  const detailKey = `${weekDate}_${ticker}`;
+  const r = calculateItemReturn(item);
+  
+  const buyP = item.buyPriceUSD || '';
+  const buyFx = item.buyFxRate || '';
+  const curP = item.currentPriceUSD || '';
+  const curFx = item.currentFxRate || '';
+  
+  // 디폴트로 숨김 (hasDetail이면 펼침)
+  const hasDetail = item.buyPriceUSD;
+  const displayStyle = hasDetail ? 'table-row' : 'none';
+  
+  let returnHtml = '';
+  if(r && r.hasData){
+    const usdPct = (r.usdReturn * 100).toFixed(1);
+    const fxPct = (r.fxReturn * 100).toFixed(1);
+    const krwPct = (r.krwReturn * 100).toFixed(1);
+    const usdColor = r.usdReturn >= 0 ? 'var(--gn)' : 'var(--rd)';
+    const fxColor = r.fxReturn >= 0 ? 'var(--yl)' : 'var(--rd)';
+    const krwColor = r.krwReturn >= 0 ? 'var(--or)' : 'var(--rd)';
+    
+    returnHtml = `
+      <div style="display:flex;gap:8px;margin-top:4px;font-size:.55rem;">
+        <span style="color:var(--dm);">📈 종목(USD):</span>
+        <span style="color:${usdColor};font-family:monospace;font-weight:700;">${r.usdReturn >= 0 ? '+' : ''}${usdPct}%</span>
+        <span style="color:var(--dm);">· 환차익:</span>
+        <span style="color:${fxColor};font-family:monospace;font-weight:700;">${r.fxReturn >= 0 ? '+' : ''}${fxPct}%</span>
+        <span style="color:var(--dm);">· 종합(KRW):</span>
+        <span style="color:${krwColor};font-family:monospace;font-weight:700;">${r.krwReturn >= 0 ? '+' : ''}${krwPct}%</span>
+      </div>
+    `;
+  }
+  
+  return `
+    <tr id="detail_${detailKey}" style="display:${displayStyle};background:rgba(0,229,118,.03);">
+      <td colspan="4" style="padding:8px 12px;border-bottom:1px solid rgba(0,229,118,.1);">
+        <div class="detail-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;font-size:.58rem;">
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">매수가 ($)</div>
+            <input type="number" value="${buyP}" step="0.01" min="0" placeholder="510.00"
+              onchange="updateItemDetail('${weekDate}','${ticker}','buyPriceUSD',this.value)"
+              style="width:100%;background:rgba(0,229,118,.06);border:1px solid rgba(0,229,118,.25);color:var(--gn);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">매수 환율 (₩/$)</div>
+            <input type="number" value="${buyFx}" step="0.1" min="0" placeholder="1350"
+              onchange="updateItemDetail('${weekDate}','${ticker}','buyFxRate',this.value)"
+              style="width:100%;background:rgba(0,229,118,.06);border:1px solid rgba(0,229,118,.25);color:var(--gn);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">현재가 ($)</div>
+            <input type="number" value="${curP}" step="0.01" min="0" placeholder="535.00"
+              onchange="updateItemDetail('${weekDate}','${ticker}','currentPriceUSD',this.value)"
+              style="width:100%;background:rgba(255,140,66,.06);border:1px solid rgba(255,140,66,.25);color:var(--or);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">현재 환율 (₩/$)</div>
+            <input type="number" value="${curFx}" step="0.1" min="0" placeholder="1410"
+              onchange="updateItemDetail('${weekDate}','${ticker}','currentFxRate',this.value)"
+              style="width:100%;background:rgba(255,140,66,.06);border:1px solid rgba(255,140,66,.25);color:var(--or);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+        </div>
+        ${returnHtml}
+      </td>
+    </tr>
+  `;
+}
+
+// 디테일 행 토글
+function toggleDetail(detailKey){
+  const row = document.getElementById('detail_' + detailKey);
+  if(!row) return;
+  row.style.display = (row.style.display === 'none' || !row.style.display) ? 'table-row' : 'none';
+}
+
+// 매수가/환율 등 디테일 필드 저장
+function updateItemDetail(weekDate, ticker, field, value){
+  const v = parseFloat(value);
+  let history = loadTrackerHistory();
+  const idx = history.findIndex(h => h.weekDate === weekDate);
+  if(idx < 0) return;
+  
+  const entry = history[idx];
+  if(!entry.actual) return;
+  
+  const itemIdx = entry.actual.findIndex(a => a.ticker === ticker);
+  if(itemIdx < 0) return;
+  
+  // 값 저장 (NaN/0 처리)
+  if(isNaN(v) || v <= 0){
+    delete entry.actual[itemIdx][field];
+  } else {
+    entry.actual[itemIdx][field] = v;
+  }
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();  // 수익 분리 즉시 반영
+}
+
+function deleteTrackerEntry(idx){
+  if(!confirm('이 주의 추적 데이터를 삭제할까요?')) return;
+  let history = loadTrackerHistory();
+  history.splice(idx, 1);
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+}
+
+// ETC 종목 추가 (워치리스트 외)
+function addEtcTicker(weekDate){
+  const tickerInput = document.getElementById(`etcTicker_${weekDate}`);
+  const weightInput = document.getElementById(`etcWeight_${weekDate}`);
+  const typeSelect = document.getElementById(`etcType_${weekDate}`);
+  
+  const ticker = (tickerInput.value || '').trim().toUpperCase();
+  const weight = parseFloat(weightInput.value) || 0;
+  const type = typeSelect.value;
+  
+  if(!ticker){
+    alert('종목 티커를 입력해주세요 (예: SCHD, JEPI)');
+    return;
+  }
+  if(weight <= 0){
+    alert('비중을 0보다 큰 값으로 입력해주세요');
+    return;
+  }
+  if(weight > 100){
+    alert('비중은 100% 이하로 입력해주세요');
+    return;
+  }
+  
+  // 워치리스트 종목이면 일반 입력으로 안내
+  const WATCHLIST = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','VNQ','XLF',
+                     'TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+  if(WATCHLIST.includes(ticker)){
+    alert(`${ticker}는 워치리스트에 있는 종목입니다.\n위 표에서 직접 비중을 입력해주세요.`);
+    return;
+  }
+  
+  // 기존 actual에 추가/갱신
+  let history = loadTrackerHistory();
+  const idx = history.findIndex(h => h.weekDate === weekDate);
+  if(idx < 0) return;
+  
+  const entry = history[idx];
+  if(!entry.actual) entry.actual = [];
+  
+  const existingIdx = entry.actual.findIndex(a => a.ticker === ticker);
+  // 기존 데이터 보존 (buyPriceUSD 등)
+  const existing = existingIdx >= 0 ? entry.actual[existingIdx] : {};
+  const data = {...existing, ticker, weight, type, etc: true};
+  
+  if(existingIdx >= 0) entry.actual[existingIdx] = data;
+  else entry.actual.push(data);
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+  
+  // 입력 필드 초기화
+  tickerInput.value = '';
+  weightInput.value = '';
+}
+
+// 📥 portfolio.json 자동 가져오기 (📅 주간 추적 탭 버튼)
+function importPortfolioJson(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = JSON.parse(e.target.result);
+      
+      if(!data.portfolio){
+        alert('❌ 잘못된 형식: portfolio 키가 없습니다.\n예상 형식:\n{ "portfolio": { "exchange_rate_krw_per_usd": 1485, "domestic_etf": [...], "foreign_etf": [...], "summary": {...} } }');
+        return;
+      }
+      
+      // 통합 함수 호출 (alias 매핑 포함)
+      importPortfolioJsonData(data);
+      
+      // file input 초기화 (같은 파일 다시 선택 가능)
+      event.target.value = '';
+    } catch(err){
+      alert('❌ JSON 파싱 실패: ' + err.message);
+      console.error('Import 에러:', err);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ===== 거래 추가 =====
+document.getElementById('tAction').addEventListener('change', function(){
+  document.getElementById('pnlRow').style.display = this.value==='sell' ? 'grid' : 'none';
+});
+
+function addTrade(){
+  const trade = {
+    id: Date.now(),
+    date: document.getElementById('tDate').value,
+    action: document.getElementById('tAction').value,
+    ticker: document.getElementById('tTicker').value.toUpperCase().trim(),
+    channel: document.getElementById('tChannel').value,
+    amount: parseFloat(document.getElementById('tAmount').value) || 0,
+    price: parseFloat(document.getElementById('tPrice').value) || 0,
+    pnl: parseFloat(document.getElementById('tPnl').value) || 0,
+    days: document.getElementById('tDays').value,
+    note: document.getElementById('tNote').value.trim()
+  };
+  if(!trade.date || !trade.ticker || !trade.amount){
+    alert('날짜·티커·금액 필수');
+    return;
+  }
+  DATA.trades.push(trade);
+  saveData(DATA);
+  // 입력 초기화
+  document.getElementById('tTicker').value = '';
+  document.getElementById('tAmount').value = '';
+  document.getElementById('tPrice').value = '';
+  document.getElementById('tPnl').value = '';
+  document.getElementById('tDays').value = '';
+  document.getElementById('tNote').value = '';
+  alert('✅ 거래 기록 저장 완료');
+  refreshStats();
+}
+
+function deleteTrade(id){
+  if(!confirm('이 거래를 삭제하시겠습니까?')) return;
+  DATA.trades = DATA.trades.filter(t => t.id !== id);
+  saveData(DATA);
+  renderTrades();
+  refreshStats();
+}
+
+// ===== 평가액 업데이트 =====
+function updateValuation(){
+  const val = {
+    date: document.getElementById('vDate').value,
+    domestic: parseFloat(document.getElementById('vDomestic').value) || 0,
+    us: parseFloat(document.getElementById('vUs').value) || 0,
+    cash: parseFloat(document.getElementById('vCash').value) || 0
+  };
+  if(!val.date){ alert('날짜 필수'); return; }
+  val.total = val.domestic + val.us + val.cash;
+  // 같은 날짜 있으면 업데이트
+  const idx = DATA.valuations.findIndex(v => v.date === val.date);
+  if(idx >= 0) DATA.valuations[idx] = val;
+  else DATA.valuations.push(val);
+  // 날짜순 정렬
+  DATA.valuations.sort((a,b) => a.date.localeCompare(b.date));
+  saveData(DATA);
+  alert(`✅ 평가액 ${(val.total/10000).toFixed(0)}만 저장됨`);
+  refreshStats();
+}
+
+// ===== 주간 평가 =====
+function addWeekly(){
+  const scores = [1,2,3,4,5].map(i => parseInt(document.getElementById('s'+i).value) || 0);
+  const w = {
+    week: document.getElementById('wWeek').value,
+    date: document.getElementById('wDate').value,
+    scores,
+    total: scores.reduce((a,b)=>a+b,0),
+    note: document.getElementById('wNote').value.trim()
+  };
+  if(!w.date || !w.week){ alert('주차·날짜 필수'); return; }
+  DATA.weekly.push(w);
+  saveData(DATA);
+  // 초기화
+  for(let i=1;i<=5;i++) document.getElementById('s'+i).value = '';
+  document.getElementById('wNote').value = '';
+  alert(`✅ 주간 평가 저장 (${w.total}/100점)`);
+  renderWeekly();
+}
+
+function deleteWeekly(week){
+  if(!confirm('삭제하시겠습니까?')) return;
+  DATA.weekly = DATA.weekly.filter(w => w.week !== week);
+  saveData(DATA);
+  renderWeekly();
+}
+
+// ===== 설정 =====
+function saveSettings(){
+  DATA.settings = {
+    start: document.getElementById('cStart').value,
+    fund: parseFloat(document.getElementById('cFund').value) || 0,
+    months: parseInt(document.getElementById('cMonths').value) || 7,
+    target: parseFloat(document.getElementById('cTarget').value) || 20
+  };
+  saveData(DATA);
+  alert('✅ 설정 저장');
+  refreshStats();
+}
+
+function loadSettings(){
+  const s = DATA.settings;
+  if(s.start) document.getElementById('cStart').value = s.start;
+  if(s.fund) document.getElementById('cFund').value = s.fund;
+  if(s.months) document.getElementById('cMonths').value = s.months;
+  if(s.target) document.getElementById('cTarget').value = s.target;
+}
+
+// ===== 백업/복원 =====
+function exportData(){
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trade-journal-${new Date().toISOString().substring(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try{
+      const imported = JSON.parse(ev.target.result);
+      
+      // 🔍 형식 자동 감지
+      // portfolio.json 형식인지 (보유 포트폴리오)
+      if(imported.portfolio && (imported.portfolio.foreign_etf || imported.portfolio.domestic_etf)){
+        if(!confirm('📊 portfolio.json 형식 감지!\n주간 추적 탭의 actual에 반영할까요?\n\n(저널 데이터 덮어쓰기 X, 매수 데이터만 추가)')) return;
+        
+        // importPortfolioJson 직접 처리 (event reuse)
+        importPortfolioJsonData(imported);
+        
+        // 자동 탭 전환
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector('.tab[onclick*="tracker"]').classList.add('active');
+        document.getElementById('tab-tracker').classList.add('active');
+        renderTrackerHistory();
+        return;
+      }
+      
+      // 저널 자체 데이터 형식인지 (settings/trades/valuations/weekly)
+      if(imported.settings || imported.trades || imported.valuations || imported.weekly){
+        if(!confirm('📓 저널 데이터 형식 감지\n기존 데이터를 덮어쓰시겠습니까?')) return;
+        DATA = imported;
+        saveData(DATA);
+        alert('✅ 복원 완료');
+        location.reload();
+        return;
+      }
+      
+      // 알 수 없는 형식
+      alert('❌ 알 수 없는 JSON 형식입니다.\n\n지원 형식:\n1. 저널 데이터 (settings/trades/valuations/weekly)\n2. portfolio.json (portfolio.foreign_etf/domestic_etf)');
+    }catch(err){
+      alert('❌ 파일 형식 오류: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// portfolio.json 데이터 처리 (importPortfolioJson에서 분리)
+function importPortfolioJsonData(data){
+  const p = data.portfolio;
+  if(!p) return;
+  
+  const fxRate = p.exchange_rate_krw_per_usd;
+  const total = p.summary?.grand_total_krw || 0;
+  
+  if(!fxRate || !total){
+    alert('❌ 환율 또는 총자산 정보가 없습니다.');
+    return;
+  }
+  
+  // 워치리스트
+  const WATCHLIST_1X = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','VNQ','XLF'];
+  const WATCHLIST_3X = ['TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+  const WATCHLIST_SET = new Set([...WATCHLIST_1X, ...WATCHLIST_3X]);
+  
+  // 🎯 유사 ETF 매핑 - 자동으로 워치리스트 종목으로 매칭
+  // (AIQ는 인공지능 ETF지만 QQQ와 비슷한 빅테크 추종)
+  const ALIAS_MAP = {
+    'AIQ': 'QQQ',     // 인공지능 ETF → QQQ로 매칭
+    'IYW': 'QQQ',     // iShares 미국 기술 → QQQ
+    'XLK': 'QQQ',     // Technology Select → QQQ
+    'VGT': 'QQQ',     // Vanguard Tech → QQQ
+    'SOXX': 'SMH',    // iShares 반도체 → SMH
+    'GLD': 'GDX',     // 금 현물 → GDX (금광주 대용)
+    'SLV': 'GDX',     // 은 → GDX (금광주 대용)
+    'XLF': 'XLF',     // 동일
+    'KBE': 'XLF',     // 은행 → 금융
+    'IBB': 'IBB',
+    'XBI': 'IBB',     // 생명공학 → IBB (바이오)
+  };
+  
+  function resolveTicker(ticker){
+    return ALIAS_MAP[ticker] || ticker;
+  }
+  
+  let history = loadTrackerHistory();
+  let targetEntry;
+  if(history.length > 0){
+    targetEntry = history[history.length - 1];
+  } else {
+    const now = new Date();
+    const dow = now.getDay();
+    const lastSat = new Date(now);
+    if(dow !== 6){
+      const back = (dow + 1) % 7;
+      lastSat.setDate(now.getDate() - back);
+    }
+    const weekDate = lastSat.toISOString().substring(0, 10);
+    targetEntry = {
+      weekDate, timestamp: Date.now(),
+      spyState: 'neutral', monthlyOk: true,
+      totalBuy1x: 0, totalBuy3x: 0, cash: 0,
+      recommended: [], actual: [], weekResult: null,
+    };
+    history.push(targetEntry);
+  }
+  
+  if(!targetEntry.actual) targetEntry.actual = [];
+  
+  // 🛡️ 재 import 시 기존 누적 데이터 초기화 (중복 방지)
+  // 사용자 수동 입력(메모, ETC 직접 추가)은 보존, portfolio.json 자동 채운 부분만 리셋
+  targetEntry.actual = targetEntry.actual.filter(a => a.manualAdded === true);
+  
+  // 💰 portfolio.json 메타 정보 저장 (총자산, 환율)
+  targetEntry.portfolioMeta = {
+    totalKRW: total,
+    fxRate: fxRate,
+    importedAt: Date.now(),
+  };
+  
+  let imported1x = 0, imported3x = 0, importedEtc = 0, mappedCount = 0;
+  
+  // 미장 ETF
+  if(p.foreign_etf){
+    p.foreign_etf.forEach(item => {
+      const origTicker = item.ticker;
+      const ticker = resolveTicker(origTicker);  // alias 매핑
+      const isMapped = ticker !== origTicker;
+      const weight = (item.total_cost_krw / total) * 100;
+      const buyPriceUSD = item.avg_price_usd;
+      const buyFxRate = item.total_cost_krw / item.total_cost_usd;
+      const isLev = WATCHLIST_3X.includes(ticker);
+      const isWatch = WATCHLIST_SET.has(ticker);
+      
+      const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
+      const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
+      
+      // 🛡️ 같은 origTicker가 이미 mappedFrom에 있으면 → 재 import 케이스
+      // 비중 누적 방지: 기존 mappedFrom에서 해당 weight 빼고 재계산
+      let prevMappedWeight = 0;
+      if(isMapped && existing.mappedFrom){
+        const existingMap = existing.mappedFrom.find(m => m.ticker === origTicker);
+        if(existingMap) prevMappedWeight = existingMap.weight;
+      }
+      
+      // 비중 합산 로직:
+      // - 매핑(예: AIQ→QQQ): 기존 weight - 같은 origTicker의 이전 mapped weight (재 import 시 중복 방지)
+      // - 직접(예: QQQ): 기존 weight 유지 (이미 매핑된 AIQ가 있으면 보존하고 더함)
+      let prevWeight = 0;
+      if(existing.weight){
+        if(isMapped){
+          prevWeight = existing.weight - prevMappedWeight;
+        } else {
+          // 직접 ticker일 때, 매핑된 부분(mappedFrom)은 유지하고 자체 비중만 갱신
+          // existing.weight = 자체 + 매핑 합 → 매핑 합만 남기기
+          const mappedSum = (existing.mappedFrom || []).reduce((s, m) => s + m.weight, 0);
+          prevWeight = mappedSum;
+        }
+      }
+      const totalWeight = parseFloat((prevWeight + weight).toFixed(2));
+      
+      const data = {
+        ...existing,
+        ticker,
+        weight: totalWeight,
+        type: isLev ? '3x' : '1x',
+        buyPriceUSD: Math.round(buyPriceUSD * 10000) / 10000,
+        buyFxRate: Math.round(buyFxRate),
+        // 💰 정확한 평가금 계산용
+        quantity: (existing.quantity || 0) + (item.quantity || 0),
+        totalCostUSD: (existing.totalCostUSD || 0) + (item.total_cost_usd || 0),
+        totalCostKRW: (existing.totalCostKRW || 0) + (item.total_cost_krw || 0),
+      };
+      
+      if(!isWatch) data.etc = true;
+      
+      if(isMapped){
+        // 매핑 정보 저장 (예: QQQ에 AIQ도 있다)
+        if(!data.mappedFrom) data.mappedFrom = [];
+        // 🛡️ 중복 방지: 같은 origTicker가 이미 있으면 덮어쓰기 (push X)
+        const dupIdx = data.mappedFrom.findIndex(m => m.ticker === origTicker);
+        const mappedItem = {
+          ticker: origTicker,
+          weight: Math.round(weight * 100) / 100,
+          name: item.name,
+        };
+        if(dupIdx >= 0){
+          data.mappedFrom[dupIdx] = mappedItem;
+        } else {
+          data.mappedFrom.push(mappedItem);
+          mappedCount++;
+        }
+      }
+      
+      if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
+      else targetEntry.actual.push(data);
+      
+      if(isLev) imported3x++;
+      else if(isWatch) imported1x++;
+      else importedEtc++;
+    });
+  }
+  
+  // 국장 ETF
+  if(p.domestic_etf){
+    p.domestic_etf.forEach(item => {
+      const weight = (item.total_cost_krw / total) * 100;
+      const alias = item.alias;
+      
+      if(alias && WATCHLIST_SET.has(alias)){
+        const ticker = alias;
+        const isLev = WATCHLIST_3X.includes(ticker);
+        
+        const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
+        const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
+        
+        // 🛡️ 재 import 안전: 기존 krWeight 차감 후 새로 더하기
+        const prevKrWeight = existing.krWeight || 0;
+        const prevWeight = (existing.weight || 0) - prevKrWeight;
+        const totalWeight = parseFloat((prevWeight + weight).toFixed(2));
+        
+        const data = {
+          ...existing,
+          ticker,
+          weight: totalWeight,
+          type: isLev ? '3x' : '1x',
+          hasKR: true,
+          krWeight: parseFloat(weight.toFixed(2)),
+          krAvgPriceKRW: item.avg_price_krw,
+          krName: item.name,
+        };
+        
+        if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
+        else targetEntry.actual.push(data);
+        
+        if(isLev) imported3x++;
+        else imported1x++;
+      } else {
+        const ticker = `KR_${(alias || item.name).slice(0, 18)}`.replace(/\s+/g, '_');
+        
+        const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
+        const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
+        
+        const data = {
+          ...existing,
+          ticker,
+          name: item.name,
+          weight: Math.round(weight * 100) / 100,
+          type: '1x',
+          etc: true,
+          isKorean: true,
+          buyPriceKRW: item.avg_price_krw,
+        };
+        
+        if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
+        else targetEntry.actual.push(data);
+        
+        importedEtc++;
+      }
+    });
+  }
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+  
+  alert(`✅ 포트폴리오 import 완료!\n\n` +
+    `📅 주차: ${targetEntry.weekDate}\n` +
+    `💱 환율: ${fxRate}원/$\n` +
+    `💰 총자산: ${total.toLocaleString()}원\n\n` +
+    `반영:\n` +
+    `  1배 ETF (워치리스트): ${imported1x}종\n` +
+    `  3배 ETF (워치리스트): ${imported3x}종\n` +
+    `  ETC (워치리스트 외): ${importedEtc}종\n` +
+    (mappedCount > 0 ? `\n🎯 자동 매핑: ${mappedCount}종 (예: AIQ → QQQ)` : '')
+  );
+}
+
+function resetAll(){
+  if(!confirm('⚠️ 모든 데이터가 삭제됩니다. 계속하시겠습니까?')) return;
+  if(!confirm('진짜 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+  localStorage.removeItem(KEY);
+  DATA = {settings:{}, trades:[], valuations:[], weekly:[]};
+  alert('초기화 완료');
+  location.reload();
+}
+
+// ===== 렌더링 =====
+function refreshStats(){
+  const s = DATA.settings;
+  // D-Day
+  if(s.start){
+    const start = new Date(s.start);
+    const months = s.months || 7;
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+    const today = new Date();
+    const totalDays = Math.floor((end - start) / 86400000);
+    const passed = Math.floor((today - start) / 86400000);
+    const remaining = Math.floor((end - today) / 86400000);
+    const progress = Math.max(0, Math.min(100, (passed/totalDays)*100));
+
+    document.getElementById('ddayValue').textContent = remaining > 0 ? `D-${remaining}` : (remaining === 0 ? 'D-DAY' : `+${-remaining}일 경과`);
+    document.getElementById('ddayText').textContent = `${start.toISOString().substring(0,10)} ~ ${end.toISOString().substring(0,10)} · ${passed}/${totalDays}일`;
+    document.getElementById('ddayBar').style.width = progress + '%';
+  }
+
+  // 시작 자금
+  document.getElementById('statStart').textContent = s.fund ? formatWon(s.fund) : '--';
+
+  // 현재 평가액 (가장 최근 valuation)
+  const latest = DATA.valuations[DATA.valuations.length-1];
+  if(latest && s.fund){
+    const ret = (latest.total - s.fund) / s.fund;
+    document.getElementById('statCurrent').textContent = formatWon(latest.total);
+    const retEl = document.getElementById('statReturn');
+    retEl.textContent = (ret>=0?'+':'') + (ret*100).toFixed(1) + '%';
+    retEl.className = 'stat-v ' + (ret>=0?'gn':'rd');
+  } else {
+    document.getElementById('statCurrent').textContent = '--';
+    document.getElementById('statReturn').textContent = '--';
+  }
+
+  // 실현 손익 (매도 거래 합)
+  const sells = DATA.trades.filter(t => t.action === 'sell');
+  const totalPnl = sells.reduce((sum,t) => sum + (t.pnl || 0), 0);
+  const pnlEl = document.getElementById('statPnl');
+  pnlEl.textContent = formatWon(totalPnl);
+  pnlEl.className = 'stat-v ' + (totalPnl>=0?'gn':'rd');
+
+  // 거래 횟수
+  document.getElementById('statTrades').textContent = DATA.trades.length;
+
+  // 승률
+  if(sells.length > 0){
+    const wins = sells.filter(t => (t.pnl||0) > 0).length;
+    const winRate = (wins / sells.length * 100).toFixed(0);
+    document.getElementById('statWin').textContent = winRate + '%';
+  } else {
+    document.getElementById('statWin').textContent = '--';
+  }
+}
+
+function formatWon(n){
+  if(!n && n !== 0) return '--';
+  if(Math.abs(n) >= 100000000) return (n/100000000).toFixed(2) + '억';
+  if(Math.abs(n) >= 10000) return (n/10000).toFixed(0) + '만';
+  return n.toLocaleString() + '원';
+}
+
+function renderTrades(){
+  const list = document.getElementById('tradeList');
+  if(DATA.trades.length === 0){
+    list.innerHTML = '<div class="empty">아직 거래 기록 없음</div>';
+    return;
+  }
+  // 최신순 정렬
+  const sorted = [...DATA.trades].sort((a,b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(t => {
+    const actionLabel = {buy:'매수', sell:'매도', adjust:'조정'}[t.action];
+    const channel = t.channel === 'domestic' ? '🇰🇷' : '🇺🇸';
+    const pnlStr = t.action==='sell' && t.pnl
+      ? `<span class="trade-pnl ${t.pnl>=0?'gn':'rd'}">${t.pnl>=0?'+':''}${formatWon(t.pnl)}</span>`
+      : '';
+    return `<div class="trade-item ${t.action}">
+      <div class="trade-head">
+        <div>
+          <span class="trade-tk">${t.ticker}</span>
+          <span class="trade-action ${t.action}">${actionLabel}</span>
+          <span style="margin-left:6px">${channel}</span>
+        </div>
+        <span class="trade-amt">${formatWon(t.amount)}</span>
+      </div>
+      <div class="trade-meta">${t.date} ${t.price?'@ $'+t.price:''} ${t.days?'· '+t.days:''} ${pnlStr}</div>
+      ${t.note?`<div class="trade-note">${t.note}</div>`:''}
+      <div class="trade-actions">
+        <button onclick="deleteTrade(${t.id})">🗑️ 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderWeekly(){
+  const list = document.getElementById('weeklyList');
+  if(DATA.weekly.length === 0){
+    list.innerHTML = '<div class="empty">아직 주간 평가 없음</div>';
+    return;
+  }
+  const sorted = [...DATA.weekly].sort((a,b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(w => {
+    const tcolor = w.total >= 80 ? 'gn' : w.total >= 60 ? 'yl' : 'rd';
+    return `<div class="trade-item">
+      <div class="trade-head">
+        <div>
+          <span class="trade-tk">${w.week}</span>
+          <span class="trade-meta" style="margin-left:8px">${w.date}</span>
+        </div>
+        <span class="trade-pnl ${tcolor}" style="font-size:1rem">${w.total}/100</span>
+      </div>
+      <div class="trade-meta" style="font-size:.6rem">
+        ① ${w.scores[0]} · ② ${w.scores[1]} · ③ ${w.scores[2]} · ④ ${w.scores[3]} · ⑤ ${w.scores[4]}
+      </div>
+      ${w.note?`<div class="trade-note">${w.note}</div>`:''}
+      <div class="trade-actions">
+        <button onclick="deleteWeekly('${w.week}')">🗑️ 삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 자산 곡선 =====
+function drawEquity(){
+  const canvas = document.getElementById('equityChart');
+  if(!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth;
+  const H = 160;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  if(DATA.valuations.length < 2){
+    ctx.fillStyle = '#5a6478';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('평가액 데이터 2개 이상 필요', W/2, H/2);
+    return;
+  }
+
+  const vals = DATA.valuations.map(v => v.total);
+  const fund = DATA.settings.fund || vals[0];
+  const minV = Math.min(...vals, fund) * 0.97;
+  const maxV = Math.max(...vals, fund) * 1.03;
+  const PAD_L = 50, PAD_R = 12, PAD_T = 16, PAD_B = 28;
+  const GW = W - PAD_L - PAD_R;
+  const GH = H - PAD_T - PAD_B;
+  const sx = i => PAD_L + (i/(vals.length-1)) * GW;
+  const sy = v => PAD_T + (1 - (v-minV)/(maxV-minV)) * GH;
+
+  // 시작 자금 기준선
+  ctx.strokeStyle = 'rgba(58,80,104,.5)';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(PAD_L, sy(fund));
+  ctx.lineTo(W - PAD_R, sy(fund));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#5a6478';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('시작', PAD_L+2, sy(fund)-3);
+
+  // Y축 라벨
+  for(let i=0;i<=4;i++){
+    const v = minV + (maxV-minV) * (1 - i/4);
+    const y = PAD_T + GH * (i/4);
+    ctx.fillStyle = '#5a6478';
+    ctx.textAlign = 'right';
+    ctx.fillText(formatWon(v), PAD_L-3, y+3);
+  }
+
+  // 자산 곡선 (그라데이션 채우기)
+  ctx.beginPath();
+  vals.forEach((v,i) => {
+    const x = sx(i), y = sy(v);
+    if(i===0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(sx(vals.length-1), H - PAD_B);
+  ctx.lineTo(PAD_L, H - PAD_B);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(0,229,204,.2)');
+  grad.addColorStop(1, 'rgba(0,229,204,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // 라인
+  ctx.beginPath();
+  ctx.strokeStyle = '#00e5cc';
+  ctx.lineWidth = 2;
+  vals.forEach((v,i) => {
+    const x = sx(i), y = sy(v);
+    if(i===0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 포인트
+  vals.forEach((v,i) => {
+    ctx.fillStyle = '#00e5cc';
+    ctx.beginPath();
+    ctx.arc(sx(i), sy(v), 3, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // 마지막 값 라벨
+  const lastV = vals[vals.length-1];
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(formatWon(lastV), W - PAD_R - 4, sy(lastV) - 6);
+}
+
+// ===== 초기화 =====
+window.addEventListener('load', () => {
+  // 오늘 날짜 기본값
+  const today = new Date().toISOString().substring(0,10);
+  document.getElementById('tDate').value = today;
+  document.getElementById('vDate').value = today;
+  document.getElementById('wDate').value = today;
+  // 주차 자동 계산
+  const week = `${today.substring(0,4)}-W${getWeekNum(new Date())}`;
+  document.getElementById('wWeek').value = week;
+
+  loadSettings();
+  refreshStats();
+  renderTrackerHistory();  // 📅 첫 탭 (주간 추적) 자동 렌더
+});
+
+function getWeekNum(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date - yearStart) / 86400000 + 1) / 7).toString().padStart(2,'0');
+}
+
+window.addEventListener('resize', drawEquity);
+</script>
+</body>
+</html>
