@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>📔 H8 Trade Journal · 자산운용 기록</title>
+<title>📔 Trade Journal · 7개월 자산운용 테스트</title>
 <style>
 :root{
   --bg:#0a0e15;--s1:#0f141d;--s2:#161d2a;--bd:rgba(255,255,255,.08);
@@ -143,8 +143,8 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0;}
 <body>
 <div class="wrap">
 
-<h1>📔 H8 Trade Journal <span class="badge">v1.0</span></h1>
-<div class="sub">H8 시스템 자산운용 기록 · 거래/심리/자가평가</div>
+<h1>📔 Trade Journal <span class="badge">v1.0</span></h1>
+<div class="sub">7개월 자산운용 테스트 기록 · 거래/심리/자가평가</div>
 
 <!-- D-Day -->
 <div class="dday">
@@ -184,14 +184,36 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0;}
 
 <!-- 탭 -->
 <div class="tabs">
-  <button class="tab active" onclick="showTab('add')">+ 거래 추가</button>
+  <button class="tab active" onclick="showTab('tracker')">📅 주간 추적</button>
+  <button class="tab" onclick="showTab('add')">+ 거래 추가</button>
   <button class="tab" onclick="showTab('list')">거래 목록</button>
   <button class="tab" onclick="showTab('weekly')">주간 평가</button>
   <button class="tab" onclick="showTab('settings')">설정</button>
 </div>
 
+<!-- 📅 주간 추적 탭 (트래커 자동 연동) -->
+<div class="tab-content active" id="tab-tracker">
+  <div class="card">
+    <div class="card-title">📅 주간 매매 추적 (트래커 자동 연동)</div>
+    <div style="font-size:.7rem;color:var(--dm);line-height:1.6;margin-bottom:12px;">
+      💡 트래커에서 SCAN 누르면 자동 저장됨 → 매주 권장 vs 실제 비교 + 누적 수익률 추적<br>
+      ✓ 매주 토요일 권장 리스트 자동 표시<br>
+      ✓ 실제 매수 비중 입력 → 차이 계산<br>
+      ✓ 다음주에 실제 수익률 평가
+    </div>
+    <div id="trackerHistoryContainer">
+      <div style="text-align:center;padding:30px;color:var(--dm);font-size:.75rem;">
+        📭 데이터 없음<br>
+        <span style="font-size:.65rem;color:var(--dm);margin-top:6px;display:inline-block;">
+          트래커(trend-tracker.html)에서 SCAN ALL STOCKS 클릭하면 자동 저장됩니다
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 거래 추가 탭 -->
-<div class="tab-content active" id="tab-add">
+<div class="tab-content" id="tab-add">
   <div class="card">
     <div class="card-title">📝 새 거래 입력</div>
     <div class="form-row">
@@ -397,6 +419,211 @@ function showTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='list'){ renderTrades(); drawEquity(); }
   if(name==='weekly') renderWeekly();
+  if(name==='tracker') renderTrackerHistory();
+}
+
+// ===== 📅 주간 추적 (트래커 자동 연동) =====
+const TRACKER_KEY = 'tracker_to_journal_v1';
+
+function loadTrackerHistory(){
+  try {
+    const raw = localStorage.getItem(TRACKER_KEY);
+    if(!raw) return [];
+    return JSON.parse(raw);
+  } catch(e){
+    console.error('트래커 히스토리 로드 실패:', e);
+    return [];
+  }
+}
+
+function saveTrackerHistory(history){
+  try {
+    localStorage.setItem(TRACKER_KEY, JSON.stringify(history));
+  } catch(e){
+    console.error('트래커 히스토리 저장 실패:', e);
+  }
+}
+
+function renderTrackerHistory(){
+  const history = loadTrackerHistory();
+  const container = document.getElementById('trackerHistoryContainer');
+  
+  if(history.length === 0){
+    container.innerHTML = `
+      <div style="text-align:center;padding:30px;color:var(--dm);font-size:.75rem;">
+        📭 데이터 없음<br>
+        <span style="font-size:.65rem;color:var(--dm);margin-top:6px;display:inline-block;">
+          트래커(trend-tracker.html)에서 SCAN ALL STOCKS 클릭하면 자동 저장됩니다
+        </span>
+      </div>
+    `;
+    return;
+  }
+  
+  // 시간 역순 (최신 위)
+  const sorted = [...history].reverse();
+  
+  // 누적 수익률 계산
+  let cumSysReturn = 0;
+  let cumActualReturn = 0;
+  for(const entry of history){
+    if(entry.weekResult){
+      cumSysReturn += (entry.weekResult.sysReturn || 0);
+      cumActualReturn += (entry.weekResult.actualReturn || 0);
+    }
+  }
+  
+  let html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="padding:10px;background:rgba(0,212,255,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">총 추적 주</div>
+        <div style="font-size:1.2rem;color:var(--cy);font-weight:700;font-family:monospace;">${history.length}</div>
+      </div>
+      <div style="padding:10px;background:rgba(0,229,118,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">시스템 누적</div>
+        <div style="font-size:1.2rem;color:var(--gn);font-weight:700;font-family:monospace;">${cumSysReturn >= 0 ? '+' : ''}${(cumSysReturn*100).toFixed(2)}%</div>
+      </div>
+      <div style="padding:10px;background:rgba(255,140,66,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">실제 누적</div>
+        <div style="font-size:1.2rem;color:var(--or);font-weight:700;font-family:monospace;">${cumActualReturn >= 0 ? '+' : ''}${(cumActualReturn*100).toFixed(2)}%</div>
+      </div>
+    </div>
+  `;
+  
+  // 각 주별 카드
+  sorted.forEach((entry, idx) => {
+    const recommended = entry.recommended || [];
+    const actual = entry.actual || [];
+    const result = entry.weekResult;
+    
+    const recMap = {};
+    recommended.forEach(r => recMap[r.ticker] = r);
+    const actualMap = {};
+    actual.forEach(a => actualMap[a.ticker] = a);
+    
+    // 모든 티커 (권장 + 실제)
+    const allTickers = new Set([...recommended.map(r => r.ticker), ...actual.map(a => a.ticker)]);
+    
+    html += `
+      <div style="margin-bottom:14px;padding:14px;background:rgba(35,46,66,.5);border-radius:8px;border:1px solid rgba(0,212,255,.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <span style="font-size:.85rem;color:var(--cy);font-weight:700;font-family:monospace;">📅 ${entry.weekDate}</span>
+            <span style="font-size:.62rem;color:var(--dm);margin-left:8px;">
+              ${entry.spyState === 'bull' ? '🟢 BULL' : entry.spyState === 'bear' ? '🔴 BEAR' : '🟡 NEUTRAL'}
+              ${entry.monthlyOk ? '· 월봉 OK' : '· 월봉 X'}
+            </span>
+          </div>
+          <button onclick="deleteTrackerEntry(${history.length - 1 - idx})" style="background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.3);color:var(--rd);font-size:.55rem;padding:4px 8px;border-radius:4px;cursor:pointer;">🗑️</button>
+        </div>
+        
+        <table style="width:100%;font-size:.65rem;color:var(--tx);border-collapse:collapse;">
+          <thead><tr style="border-bottom:1px solid rgba(0,212,255,.2);color:var(--cy);">
+            <th style="text-align:left;padding:6px 4px;">종목</th>
+            <th style="text-align:right;padding:6px 4px;">권장</th>
+            <th style="text-align:right;padding:6px 4px;">실제</th>
+            <th style="text-align:right;padding:6px 4px;">차이</th>
+          </tr></thead>
+          <tbody>
+    `;
+    
+    Array.from(allTickers).sort((a,b) => {
+      const aw = (recMap[a]?.weight || 0) + (actualMap[a]?.weight || 0);
+      const bw = (recMap[b]?.weight || 0) + (actualMap[b]?.weight || 0);
+      return bw - aw;
+    }).forEach(ticker => {
+      const rec = recMap[ticker];
+      const act = actualMap[ticker];
+      const recW = rec?.weight || 0;
+      const actW = act?.weight || 0;
+      const diff = actW - recW;
+      const isLev = (rec?.type === '3x') || ticker.match(/^(TQQQ|SOXL|NUGT|LABU|URAA|FAS)$/);
+      
+      html += `
+        <tr style="border-bottom:1px solid rgba(0,212,255,.05);">
+          <td style="padding:5px 4px;">
+            <span style="color:${isLev ? 'var(--rd)' : 'var(--tx)'};font-weight:${isLev ? '700' : '400'};font-family:monospace;">${ticker}${isLev ? ' ⚡' : ''}</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
+          <td style="padding:5px 4px;text-align:right;">
+            <input type="number" value="${actW}" min="0" max="100" step="1"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, ${rec?.type === '3x' || isLev}, '${rec?.baseTicker || ''}')"
+              style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
+            <span style="color:var(--dm);font-size:.55rem;">%</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
+            ${diff > 0 ? '+' : ''}${diff}%
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += `</tbody></table>`;
+    
+    // 합계
+    const totalRec = recommended.reduce((s,r) => s + r.weight, 0);
+    const totalAct = actual.reduce((s,a) => s + a.weight, 0);
+    
+    html += `
+      <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--dm);padding-top:6px;border-top:1px dashed rgba(0,212,255,.2);margin-top:6px;">
+        <span>합계</span>
+        <span>권장 ${totalRec}% · 실제 ${totalAct}%</span>
+      </div>
+    `;
+    
+    // 결과 (있으면)
+    if(result){
+      const sysRet = (result.sysReturn || 0) * 100;
+      const actRet = (result.actualReturn || 0) * 100;
+      const diff = actRet - sysRet;
+      html += `
+        <div style="margin-top:10px;padding:8px;background:rgba(0,229,118,.04);border-radius:4px;font-size:.62rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div><span style="color:var(--dm);">시스템</span><br><span style="color:var(--gn);font-weight:700;font-family:monospace;">${sysRet >= 0 ? '+' : ''}${sysRet.toFixed(2)}%</span></div>
+            <div><span style="color:var(--dm);">실제</span><br><span style="color:var(--or);font-weight:700;font-family:monospace;">${actRet >= 0 ? '+' : ''}${actRet.toFixed(2)}%</span></div>
+            <div><span style="color:var(--dm);">차이</span><br><span style="color:${diff >= 0 ? 'var(--cy)' : 'var(--rd)'};font-weight:700;font-family:monospace;">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%p</span></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    html += `</div>`;
+  });
+  
+  container.innerHTML = html;
+}
+
+function updateActualWeight(weekDate, ticker, weight, isLev, baseTicker){
+  const w = parseFloat(weight) || 0;
+  let history = loadTrackerHistory();
+  const idx = history.findIndex(h => h.weekDate === weekDate);
+  if(idx < 0) return;
+  
+  const entry = history[idx];
+  if(!entry.actual) entry.actual = [];
+  
+  const existingIdx = entry.actual.findIndex(a => a.ticker === ticker);
+  if(w > 0){
+    const data = {ticker, weight: w, type: isLev ? '3x' : '1x'};
+    if(baseTicker) data.baseTicker = baseTicker;
+    
+    if(existingIdx >= 0) entry.actual[existingIdx] = data;
+    else entry.actual.push(data);
+  } else {
+    // 0이면 제거
+    if(existingIdx >= 0) entry.actual.splice(existingIdx, 1);
+  }
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+}
+
+function deleteTrackerEntry(idx){
+  if(!confirm('이 주의 추적 데이터를 삭제할까요?')) return;
+  let history = loadTrackerHistory();
+  history.splice(idx, 1);
+  saveTrackerHistory(history);
+  renderTrackerHistory();
 }
 
 // ===== 거래 추가 =====
@@ -784,6 +1011,7 @@ window.addEventListener('load', () => {
 
   loadSettings();
   refreshStats();
+  renderTrackerHistory();  // 📅 첫 탭 (주간 추적) 자동 렌더
 });
 
 function getWeekNum(d){

@@ -1577,6 +1577,99 @@ function buildPortfolioInner(SCAN_DATA, targetEl, mode) {
   // ⭐ 포트 변화 감지 - 지난주 대비 (1배 ETF) — 확정 모드에서만 (좌측 기준)
   if(mode === 'confirmed' || mode === undefined){
     detectWeeklyPortChange(allocs, lev3xRecs);
+    // 🔥 저널 자동 저장 (확정 모드 = 백테스팅과 동일 기준)
+    saveToJournal(allocs, lev3xRecs, totalBuy, lev3xTotal, cash);
+  }
+}
+
+// 🔥 매주 매수 리스트를 저널에 자동 저장 (localStorage)
+// trade-journal.html에서 자동으로 읽어 표시
+function saveToJournal(allocs, lev3xRecs, totalBuy, lev3xTotal, cash){
+  try {
+    // 토요일 날짜 계산 (이번 주 결정일)
+    const now = new Date();
+    const dow = now.getDay();
+    const daysToSat = (dow === 6) ? 0 : (6 - dow + 7) % 7;
+    const saturday = new Date(now);
+    saturday.setDate(now.getDate() + (daysToSat === 0 && dow < 6 ? -7 + daysToSat : daysToSat - (dow > 6 ? 7 : 0)));
+    // 단순화: 가장 최근 토요일 (오늘이 토면 오늘, 아니면 직전 토요일)
+    const lastSat = new Date(now);
+    if(dow !== 6){
+      const back = (dow + 1) % 7;
+      lastSat.setDate(now.getDate() - back);
+    }
+    const weekDate = lastSat.toISOString().substring(0, 10);
+    
+    // 권장 리스트 만들기
+    const recommended = [];
+    
+    // 1배 ETF 매수 리스트
+    allocs.forEach(item => {
+      recommended.push({
+        ticker: item.ticker,
+        type: '1x',
+        weight: item.weight,
+        signal: item.data.signal,
+        score: item.data.score,
+        price: item.data.price,
+        rsi: item.data.rsi,
+      });
+    });
+    
+    // 3배 ETF 매수 리스트
+    lev3xRecs.forEach(rec => {
+      recommended.push({
+        ticker: rec.lev,
+        baseTicker: rec.base,
+        type: '3x',
+        weight: rec.recWeight,
+        signal: 'STRONG_BUY',
+        score: rec.score,
+      });
+    });
+    
+    // 기존 저장 데이터 불러오기
+    let history = [];
+    try {
+      const raw = localStorage.getItem('tracker_to_journal_v1');
+      if(raw) history = JSON.parse(raw);
+    } catch(e) {}
+    
+    // 같은 주 (weekDate) 중복 체크 - 있으면 갱신, 없으면 추가
+    const existingIdx = history.findIndex(h => h.weekDate === weekDate);
+    
+    const entry = {
+      weekDate: weekDate,
+      timestamp: Date.now(),
+      spyState: SPY_STATE,
+      monthlyOk: SPY_DATA?.monthlyOk ?? true,
+      totalBuy1x: totalBuy,
+      totalBuy3x: lev3xTotal,
+      cash: cash,
+      recommended: recommended,
+      // actual은 저널 페이지에서 입력
+      actual: existingIdx >= 0 ? (history[existingIdx].actual || []) : [],
+      weekResult: null,  // 다음 주 평가 시 채움
+    };
+    
+    if(existingIdx >= 0){
+      // 같은 주 갱신 - actual은 보존
+      entry.actual = history[existingIdx].actual || [];
+      history[existingIdx] = entry;
+    } else {
+      history.push(entry);
+    }
+    
+    // 최대 52주 (1년) 보관
+    if(history.length > 52) history = history.slice(-52);
+    
+    // 시간 순 정렬
+    history.sort((a, b) => a.timestamp - b.timestamp);
+    
+    localStorage.setItem('tracker_to_journal_v1', JSON.stringify(history));
+    console.log(`💾 저널 자동 저장: ${weekDate} (${recommended.length}종 권장)`);
+  } catch(e){
+    console.error('저널 저장 실패:', e);
   }
 }
 
