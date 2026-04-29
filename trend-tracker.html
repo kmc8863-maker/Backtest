@@ -1584,15 +1584,12 @@ function buildPortfolioInner(SCAN_DATA, targetEl, mode) {
 
 // 🔥 매주 매수 리스트를 저널에 자동 저장 (localStorage)
 // trade-journal.html에서 자동으로 읽어 표시
+// ⭐ 모든 워치리스트 종목 포함 (권장 0%여도) - 저널에서 비중 입력 가능
 function saveToJournal(allocs, lev3xRecs, totalBuy, lev3xTotal, cash){
   try {
     // 토요일 날짜 계산 (이번 주 결정일)
     const now = new Date();
     const dow = now.getDay();
-    const daysToSat = (dow === 6) ? 0 : (6 - dow + 7) % 7;
-    const saturday = new Date(now);
-    saturday.setDate(now.getDate() + (daysToSat === 0 && dow < 6 ? -7 + daysToSat : daysToSat - (dow > 6 ? 7 : 0)));
-    // 단순화: 가장 최근 토요일 (오늘이 토면 오늘, 아니면 직전 토요일)
     const lastSat = new Date(now);
     if(dow !== 6){
       const back = (dow + 1) % 7;
@@ -1600,31 +1597,59 @@ function saveToJournal(allocs, lev3xRecs, totalBuy, lev3xTotal, cash){
     }
     const weekDate = lastSat.toISOString().substring(0, 10);
     
-    // 권장 리스트 만들기
+    // 권장 종목 맵 만들기 (빠른 조회용)
+    const recMap1x = {};
+    allocs.forEach(item => {
+      recMap1x[item.ticker] = item;
+    });
+    const recMap3x = {};
+    lev3xRecs.forEach(rec => {
+      recMap3x[rec.lev] = rec;
+    });
+    
+    // 권장 리스트 만들기 - 모든 워치리스트 종목 포함
     const recommended = [];
     
-    // 1배 ETF 매수 리스트
-    allocs.forEach(item => {
+    // 1배 ETF: HOLD + CYCLE + WATCH 순서 (모두 포함)
+    const all1xItems = [...HOLD, ...CYCLE, ...WATCH];
+    all1xItems.forEach(item => {
+      const t = item.t;
+      const rec = recMap1x[t];
+      const scanData = SCAN_RESULTS[t] || {};
       recommended.push({
-        ticker: item.ticker,
+        ticker: t,
+        name: item.n || '',
         type: '1x',
-        weight: item.weight,
-        signal: item.data.signal,
-        score: item.data.score,
-        price: item.data.price,
-        rsi: item.data.rsi,
+        category: item.cat || 'main',
+        weight: rec ? rec.weight : 0,
+        signal: scanData.signal || '-',
+        score: scanData.score !== undefined ? scanData.score : null,
+        price: scanData.price || null,
+        rsi: scanData.rsi || null,
       });
     });
     
-    // 3배 ETF 매수 리스트
-    lev3xRecs.forEach(rec => {
+    // 3배 ETF: 6종 모두 포함 (TQQQ, SOXL, NUGT, LABU, URAA, FAS)
+    const lev3xList = [
+      {lev: 'TQQQ', base: 'QQQ',  name: 'Nasdaq100 3x'},
+      {lev: 'SOXL', base: 'SMH',  name: 'Semiconductors 3x'},
+      {lev: 'NUGT', base: 'GDX',  name: 'Gold Miners 3x'},
+      {lev: 'LABU', base: 'IBB',  name: 'Biotech 3x'},
+      {lev: 'URAA', base: 'URA',  name: 'Uranium 3x'},
+      {lev: 'FAS',  base: 'XLF',  name: 'Financials 3x'},
+    ];
+    lev3xList.forEach(item => {
+      const rec = recMap3x[item.lev];
+      const baseScanData = SCAN_RESULTS[item.base] || {};
       recommended.push({
-        ticker: rec.lev,
-        baseTicker: rec.base,
+        ticker: item.lev,
+        baseTicker: item.base,
+        name: item.name,
         type: '3x',
-        weight: rec.recWeight,
-        signal: 'STRONG_BUY',
-        score: rec.score,
+        category: 'lev',
+        weight: rec ? rec.recWeight : 0,
+        signal: rec ? 'STRONG_BUY' : (baseScanData.signal || '-'),
+        score: rec ? rec.score : (baseScanData.score !== undefined ? baseScanData.score : null),
       });
     });
     
@@ -1647,7 +1672,7 @@ function saveToJournal(allocs, lev3xRecs, totalBuy, lev3xTotal, cash){
       totalBuy3x: lev3xTotal,
       cash: cash,
       recommended: recommended,
-      // actual은 저널 페이지에서 입력
+      // actual은 저널 페이지에서 입력 (워치리스트 외 종목은 actual에 직접 추가)
       actual: existingIdx >= 0 ? (history[existingIdx].actual || []) : [],
       weekResult: null,  // 다음 주 평가 시 채움
     };

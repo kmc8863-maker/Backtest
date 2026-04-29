@@ -501,8 +501,16 @@ function renderTrackerHistory(){
     const actualMap = {};
     actual.forEach(a => actualMap[a.ticker] = a);
     
-    // 모든 티커 (권장 + 실제)
-    const allTickers = new Set([...recommended.map(r => r.ticker), ...actual.map(a => a.ticker)]);
+    // ⭐ 워치리스트 고정 순서 (1배 10종 + 3배 6종 = 16종)
+    const WATCHLIST_1X = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','VNQ','XLF'];
+    const WATCHLIST_3X = ['TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+    const WATCHLIST_ALL = [...WATCHLIST_1X, ...WATCHLIST_3X];
+    const WATCHLIST_SET = new Set(WATCHLIST_ALL);
+    
+    // ETC: actual 중 워치리스트에 없는 종목 (사용자가 추가한 것)
+    const etcTickers = actual
+      .filter(a => !WATCHLIST_SET.has(a.ticker))
+      .map(a => a.ticker);
     
     html += `
       <div style="margin-bottom:14px;padding:14px;background:rgba(35,46,66,.5);border-radius:8px;border:1px solid rgba(0,212,255,.2);">
@@ -527,47 +535,136 @@ function renderTrackerHistory(){
           <tbody>
     `;
     
-    Array.from(allTickers).sort((a,b) => {
-      const aw = (recMap[a]?.weight || 0) + (actualMap[a]?.weight || 0);
-      const bw = (recMap[b]?.weight || 0) + (actualMap[b]?.weight || 0);
-      return bw - aw;
-    }).forEach(ticker => {
+    // 1배 ETF 섹션
+    html += `<tr><td colspan="4" style="padding:6px 4px 3px 4px;font-size:.55rem;color:var(--cy);letter-spacing:1px;border-bottom:1px solid rgba(0,212,255,.1);">━━ 1배 ETF (워치리스트 ${WATCHLIST_1X.length}종) ━━</td></tr>`;
+    
+    WATCHLIST_1X.forEach(ticker => {
       const rec = recMap[ticker];
       const act = actualMap[ticker];
       const recW = rec?.weight || 0;
       const actW = act?.weight || 0;
       const diff = actW - recW;
-      const isLev = (rec?.type === '3x') || ticker.match(/^(TQQQ|SOXL|NUGT|LABU|URAA|FAS)$/);
+      const name = rec?.name || '';
       
       html += `
         <tr style="border-bottom:1px solid rgba(0,212,255,.05);">
           <td style="padding:5px 4px;">
-            <span style="color:${isLev ? 'var(--rd)' : 'var(--tx)'};font-weight:${isLev ? '700' : '400'};font-family:monospace;">${ticker}${isLev ? ' ⚡' : ''}</span>
+            <span style="color:var(--tx);font-family:monospace;">${ticker}</span>
+            ${name ? `<span style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
           </td>
           <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
           <td style="padding:5px 4px;text-align:right;">
             <input type="number" value="${actW}" min="0" max="100" step="1"
-              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, ${rec?.type === '3x' || isLev}, '${rec?.baseTicker || ''}')"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, false, '')"
               style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
             <span style="color:var(--dm);font-size:.55rem;">%</span>
           </td>
           <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
-            ${diff > 0 ? '+' : ''}${diff}%
+            ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
           </td>
         </tr>
       `;
     });
     
+    // 3배 ETF 섹션
+    html += `<tr><td colspan="4" style="padding:8px 4px 3px 4px;font-size:.55rem;color:var(--rd);letter-spacing:1px;border-bottom:1px solid rgba(255,68,85,.1);">━━ 3배 ETF (워치리스트 ${WATCHLIST_3X.length}종) ━━</td></tr>`;
+    
+    WATCHLIST_3X.forEach(ticker => {
+      const rec = recMap[ticker];
+      const act = actualMap[ticker];
+      const recW = rec?.weight || 0;
+      const actW = act?.weight || 0;
+      const diff = actW - recW;
+      const baseTicker = rec?.baseTicker || '';
+      const name = rec?.name || '';
+      
+      html += `
+        <tr style="border-bottom:1px solid rgba(255,68,85,.05);">
+          <td style="padding:5px 4px;">
+            <span style="color:var(--rd);font-weight:700;font-family:monospace;">${ticker} ⚡</span>
+            ${name ? `<span style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
+          <td style="padding:5px 4px;text-align:right;">
+            <input type="number" value="${actW}" min="0" max="100" step="1"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, true, '${baseTicker}')"
+              style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
+            <span style="color:var(--dm);font-size:.55rem;">%</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
+            ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
+          </td>
+        </tr>
+      `;
+    });
+    
+    // ETC 섹션 - 워치리스트 외 종목 (사용자 직접 추가)
+    html += `<tr><td colspan="4" style="padding:8px 4px 3px 4px;font-size:.55rem;color:var(--yl);letter-spacing:1px;border-bottom:1px solid rgba(255,193,7,.1);">━━ ETC (워치리스트 외 - 직접 추가) ━━</td></tr>`;
+    
+    etcTickers.forEach(ticker => {
+      const act = actualMap[ticker];
+      const actW = act?.weight || 0;
+      const isLev = act?.type === '3x';
+      
+      html += `
+        <tr style="border-bottom:1px solid rgba(255,193,7,.05);">
+          <td style="padding:5px 4px;">
+            <span style="color:${isLev ? 'var(--rd)' : 'var(--yl)'};font-weight:${isLev ? '700' : '400'};font-family:monospace;">${ticker}${isLev ? ' ⚡' : ''}</span>
+            <span style="color:var(--dm);font-size:.55rem;margin-left:4px;">(직접 추가)</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
+          <td style="padding:5px 4px;text-align:right;">
+            <input type="number" value="${actW}" min="0" max="100" step="1"
+              onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, ${isLev}, '')"
+              style="width:50px;background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.3);color:var(--yl);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
+            <span style="color:var(--dm);font-size:.55rem;">%</span>
+          </td>
+          <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
+        </tr>
+      `;
+    });
+    
+    // ETC 추가 입력 행 (새 종목 직접 입력)
+    html += `
+      <tr>
+        <td colspan="4" style="padding:6px 4px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" id="etcTicker_${entry.weekDate}" placeholder="종목 (예: SCHD, JEPI)" 
+              style="flex:1;background:rgba(255,193,7,.05);border:1px solid rgba(255,193,7,.2);color:var(--yl);padding:4px 6px;border-radius:3px;font-size:.6rem;font-family:monospace;text-transform:uppercase;">
+            <input type="number" id="etcWeight_${entry.weekDate}" placeholder="비중%" min="0" max="100" step="1"
+              style="width:60px;background:rgba(255,193,7,.05);border:1px solid rgba(255,193,7,.2);color:var(--yl);padding:4px 6px;border-radius:3px;font-size:.6rem;font-family:monospace;text-align:right;">
+            <select id="etcType_${entry.weekDate}" style="background:rgba(255,193,7,.05);border:1px solid rgba(255,193,7,.2);color:var(--yl);padding:4px 6px;border-radius:3px;font-size:.6rem;font-family:monospace;">
+              <option value="1x">1배</option>
+              <option value="3x">3배 ⚡</option>
+            </select>
+            <button onclick="addEtcTicker('${entry.weekDate}')" style="background:rgba(255,193,7,.15);border:1px solid rgba(255,193,7,.4);color:var(--yl);padding:4px 10px;border-radius:3px;font-size:.6rem;cursor:pointer;font-family:monospace;font-weight:700;">+ 추가</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    
     html += `</tbody></table>`;
     
-    // 합계
+    // 합계 + 현금
     const totalRec = recommended.reduce((s,r) => s + r.weight, 0);
     const totalAct = actual.reduce((s,a) => s + a.weight, 0);
+    const cash1xRec = Math.max(0, 100 - totalRec);
+    const cash1xAct = Math.max(0, 100 - totalAct);
     
     html += `
-      <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--dm);padding-top:6px;border-top:1px dashed rgba(0,212,255,.2);margin-top:6px;">
-        <span>합계</span>
-        <span>권장 ${totalRec}% · 실제 ${totalAct}%</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:.6rem;padding-top:8px;border-top:1px dashed rgba(0,212,255,.2);margin-top:8px;">
+        <div style="text-align:center;">
+          <div style="color:var(--dm);font-size:.55rem;">합계</div>
+          <div style="color:var(--cy);font-family:monospace;">권장 ${totalRec}% · 실제 ${totalAct}%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:var(--dm);font-size:.55rem;">현금 (권장)</div>
+          <div style="color:${cash1xRec > 50 ? 'var(--yl)' : 'var(--gn)'};font-family:monospace;">${cash1xRec}%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:var(--dm);font-size:.55rem;">현금 (실제)</div>
+          <div style="color:${cash1xAct > 50 ? 'var(--yl)' : 'var(--gn)'};font-family:monospace;">${cash1xAct}%</div>
+        </div>
       </div>
     `;
     
@@ -624,6 +721,59 @@ function deleteTrackerEntry(idx){
   history.splice(idx, 1);
   saveTrackerHistory(history);
   renderTrackerHistory();
+}
+
+// ETC 종목 추가 (워치리스트 외)
+function addEtcTicker(weekDate){
+  const tickerInput = document.getElementById(`etcTicker_${weekDate}`);
+  const weightInput = document.getElementById(`etcWeight_${weekDate}`);
+  const typeSelect = document.getElementById(`etcType_${weekDate}`);
+  
+  const ticker = (tickerInput.value || '').trim().toUpperCase();
+  const weight = parseFloat(weightInput.value) || 0;
+  const type = typeSelect.value;
+  
+  if(!ticker){
+    alert('종목 티커를 입력해주세요 (예: SCHD, JEPI)');
+    return;
+  }
+  if(weight <= 0){
+    alert('비중을 0보다 큰 값으로 입력해주세요');
+    return;
+  }
+  if(weight > 100){
+    alert('비중은 100% 이하로 입력해주세요');
+    return;
+  }
+  
+  // 워치리스트 종목이면 일반 입력으로 안내
+  const WATCHLIST = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','VNQ','XLF',
+                     'TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+  if(WATCHLIST.includes(ticker)){
+    alert(`${ticker}는 워치리스트에 있는 종목입니다.\n위 표에서 직접 비중을 입력해주세요.`);
+    return;
+  }
+  
+  // 기존 actual에 추가/갱신
+  let history = loadTrackerHistory();
+  const idx = history.findIndex(h => h.weekDate === weekDate);
+  if(idx < 0) return;
+  
+  const entry = history[idx];
+  if(!entry.actual) entry.actual = [];
+  
+  const existingIdx = entry.actual.findIndex(a => a.ticker === ticker);
+  const data = {ticker, weight, type, etc: true};
+  
+  if(existingIdx >= 0) entry.actual[existingIdx] = data;
+  else entry.actual.push(data);
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+  
+  // 입력 필드 초기화
+  tickerInput.value = '';
+  weightInput.value = '';
 }
 
 // ===== 거래 추가 =====
