@@ -743,15 +743,15 @@ function renderTrackerHistory(){
           <div class="card-return-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
             <div>
               <div style="font-size:.55rem;color:var(--gn);">종목 (USD)</div>
-              <div style="font-size:.95rem;color:var(--gn);font-weight:700;font-family:monospace;">${cardReturn.usdReturn >= 0 ? '+' : ''}${(cardReturn.usdReturn*100).toFixed(2)}%</div>
+              <div style="font-size:.95rem;color:var(--gn);font-weight:700;font-family:monospace;">${cardReturn.usdReturn >= 0 ? '+' : ''}${(cardReturn.usdReturn*100).toFixed(1)}%</div>
             </div>
             <div>
               <div style="font-size:.55rem;color:var(--yl);">환차익</div>
-              <div style="font-size:.95rem;color:var(--yl);font-weight:700;font-family:monospace;">${cardReturn.fxReturn >= 0 ? '+' : ''}${(cardReturn.fxReturn*100).toFixed(2)}%</div>
+              <div style="font-size:.95rem;color:var(--yl);font-weight:700;font-family:monospace;">${cardReturn.fxReturn >= 0 ? '+' : ''}${(cardReturn.fxReturn*100).toFixed(1)}%</div>
             </div>
             <div>
               <div style="font-size:.55rem;color:var(--or);">종합 (KRW)</div>
-              <div style="font-size:.95rem;color:var(--or);font-weight:700;font-family:monospace;">${cardReturn.krwReturn >= 0 ? '+' : ''}${(cardReturn.krwReturn*100).toFixed(2)}%</div>
+              <div style="font-size:.95rem;color:var(--or);font-weight:700;font-family:monospace;">${cardReturn.krwReturn >= 0 ? '+' : ''}${(cardReturn.krwReturn*100).toFixed(1)}%</div>
             </div>
           </div>
         </div>
@@ -810,16 +810,16 @@ function renderTrackerHistory(){
             ${hasKR ? `<span style="margin-left:4px;color:var(--cy);font-size:.55rem;background:rgba(0,212,255,.1);padding:1px 5px;border-radius:3px;" title="${act.krName || ''}">🇰🇷 ${krW.toFixed(1)}%</span>` : ''}
             ${mappedHtml}
           </td>
-          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
+          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW.toFixed(1)}%</td>
           <td style="padding:5px 4px;text-align:right;">
-            <input type="number" value="${actW}" min="0" max="100" step="1"
+            <input type="number" value="${actW.toFixed(1)}" min="0" max="100" step="0.1"
               onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, false, '')"
               style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
             <span style="color:var(--dm);font-size:.55rem;">%</span>
             ${hasKR ? `<div style="font-size:.5rem;color:var(--dm);margin-top:1px;">🇺🇸${usW.toFixed(1)}+🇰🇷${krW.toFixed(1)}</div>` : ''}
           </td>
           <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
-            ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
+            ${Math.abs(diff) >= 0.05 ? (diff > 0 ? '+' : '') + diff.toFixed(1) + '%' : '-'}
           </td>
         </tr>
         ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, false, '') : ''}
@@ -847,15 +847,15 @@ function renderTrackerHistory(){
             ${name ? `<span class="ticker-name" style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
             ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
           </td>
-          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
+          <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW.toFixed(1)}%</td>
           <td style="padding:5px 4px;text-align:right;">
-            <input type="number" value="${actW}" min="0" max="100" step="1"
+            <input type="number" value="${actW.toFixed(1)}" min="0" max="100" step="0.1"
               onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, true, '${baseTicker}')"
               style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
             <span style="color:var(--dm);font-size:.55rem;">%</span>
           </td>
           <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
-            ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
+            ${Math.abs(diff) >= 0.05 ? (diff > 0 ? '+' : '') + diff.toFixed(1) + '%' : '-'}
           </td>
         </tr>
         ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, true, baseTicker) : ''}
@@ -881,7 +881,7 @@ function renderTrackerHistory(){
           </td>
           <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
           <td style="padding:5px 4px;text-align:right;">
-            <input type="number" value="${actW}" min="0" max="100" step="1"
+            <input type="number" value="${actW.toFixed(1)}" min="0" max="100" step="0.1"
               onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, ${isLev}, '')"
               style="width:50px;background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.3);color:var(--yl);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
             <span style="color:var(--dm);font-size:.55rem;">%</span>
@@ -1006,9 +1006,9 @@ function renderDetailRow(weekDate, ticker, item, isLev, baseTicker){
   
   let returnHtml = '';
   if(r && r.hasData){
-    const usdPct = (r.usdReturn * 100).toFixed(2);
-    const fxPct = (r.fxReturn * 100).toFixed(2);
-    const krwPct = (r.krwReturn * 100).toFixed(2);
+    const usdPct = (r.usdReturn * 100).toFixed(1);
+    const fxPct = (r.fxReturn * 100).toFixed(1);
+    const krwPct = (r.krwReturn * 100).toFixed(1);
     const usdColor = r.usdReturn >= 0 ? 'var(--gn)' : 'var(--rd)';
     const fxColor = r.fxReturn >= 0 ? 'var(--yl)' : 'var(--rd)';
     const krwColor = r.krwReturn >= 0 ? 'var(--or)' : 'var(--rd)';
@@ -1411,6 +1411,10 @@ function importPortfolioJsonData(data){
   
   if(!targetEntry.actual) targetEntry.actual = [];
   
+  // 🛡️ 재 import 시 기존 누적 데이터 초기화 (중복 방지)
+  // 사용자 수동 입력(메모, ETC 직접 추가)은 보존, portfolio.json 자동 채운 부분만 리셋
+  targetEntry.actual = targetEntry.actual.filter(a => a.manualAdded === true);
+  
   // 💰 portfolio.json 메타 정보 저장 (총자산, 환율)
   targetEntry.portfolioMeta = {
     totalKRW: total,
@@ -1435,9 +1439,29 @@ function importPortfolioJsonData(data){
       const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
       const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
       
-      // 매핑된 경우 비중 합산 (예: AIQ + QQQ → QQQ)
-      const prevWeight = (isMapped && existing.weight) ? existing.weight : 0;
-      const totalWeight = Math.round((prevWeight + weight) * 100) / 100;
+      // 🛡️ 같은 origTicker가 이미 mappedFrom에 있으면 → 재 import 케이스
+      // 비중 누적 방지: 기존 mappedFrom에서 해당 weight 빼고 재계산
+      let prevMappedWeight = 0;
+      if(isMapped && existing.mappedFrom){
+        const existingMap = existing.mappedFrom.find(m => m.ticker === origTicker);
+        if(existingMap) prevMappedWeight = existingMap.weight;
+      }
+      
+      // 비중 합산 로직:
+      // - 매핑(예: AIQ→QQQ): 기존 weight - 같은 origTicker의 이전 mapped weight (재 import 시 중복 방지)
+      // - 직접(예: QQQ): 기존 weight 유지 (이미 매핑된 AIQ가 있으면 보존하고 더함)
+      let prevWeight = 0;
+      if(existing.weight){
+        if(isMapped){
+          prevWeight = existing.weight - prevMappedWeight;
+        } else {
+          // 직접 ticker일 때, 매핑된 부분(mappedFrom)은 유지하고 자체 비중만 갱신
+          // existing.weight = 자체 + 매핑 합 → 매핑 합만 남기기
+          const mappedSum = (existing.mappedFrom || []).reduce((s, m) => s + m.weight, 0);
+          prevWeight = mappedSum;
+        }
+      }
+      const totalWeight = parseFloat((prevWeight + weight).toFixed(2));
       
       const data = {
         ...existing,
@@ -1457,12 +1481,19 @@ function importPortfolioJsonData(data){
       if(isMapped){
         // 매핑 정보 저장 (예: QQQ에 AIQ도 있다)
         if(!data.mappedFrom) data.mappedFrom = [];
-        data.mappedFrom.push({
+        // 🛡️ 중복 방지: 같은 origTicker가 이미 있으면 덮어쓰기 (push X)
+        const dupIdx = data.mappedFrom.findIndex(m => m.ticker === origTicker);
+        const mappedItem = {
           ticker: origTicker,
           weight: Math.round(weight * 100) / 100,
           name: item.name,
-        });
-        mappedCount++;
+        };
+        if(dupIdx >= 0){
+          data.mappedFrom[dupIdx] = mappedItem;
+        } else {
+          data.mappedFrom.push(mappedItem);
+          mappedCount++;
+        }
       }
       
       if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
@@ -1487,8 +1518,10 @@ function importPortfolioJsonData(data){
         const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
         const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
         
-        const prevWeight = existing.weight || 0;
-        const totalWeight = Math.round((prevWeight + weight) * 100) / 100;
+        // 🛡️ 재 import 안전: 기존 krWeight 차감 후 새로 더하기
+        const prevKrWeight = existing.krWeight || 0;
+        const prevWeight = (existing.weight || 0) - prevKrWeight;
+        const totalWeight = parseFloat((prevWeight + weight).toFixed(2));
         
         const data = {
           ...existing,
@@ -1496,7 +1529,7 @@ function importPortfolioJsonData(data){
           weight: totalWeight,
           type: isLev ? '3x' : '1x',
           hasKR: true,
-          krWeight: weight,
+          krWeight: parseFloat(weight.toFixed(2)),
           krAvgPriceKRW: item.avg_price_krw,
           krName: item.name,
         };
