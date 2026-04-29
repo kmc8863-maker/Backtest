@@ -444,6 +444,63 @@ function saveTrackerHistory(history){
   }
 }
 
+// 💵 항목 수익 분리 계산
+// returns: {hasData, usdReturn, fxReturn, krwReturn} 또는 null
+function calculateItemReturn(item){
+  const buyP = parseFloat(item.buyPriceUSD) || 0;
+  const curP = parseFloat(item.currentPriceUSD) || 0;
+  const buyFx = parseFloat(item.buyFxRate) || 0;
+  const curFx = parseFloat(item.currentFxRate) || 0;
+  
+  // 매수 정보 X면 계산 X
+  if(buyP <= 0 || buyFx <= 0) return {hasData: false};
+  
+  // 평가 정보 X면 매수가/환율 그대로 (수익 0)
+  const finalP = curP > 0 ? curP : buyP;
+  const finalFx = curFx > 0 ? curFx : buyFx;
+  
+  const usdReturn = (finalP - buyP) / buyP;       // 종목 수익 (USD)
+  const fxReturn = (finalFx - buyFx) / buyFx;     // 환차익 (KRW)
+  const krwReturn = (1 + usdReturn) * (1 + fxReturn) - 1;  // 종합 (KRW)
+  
+  return {
+    hasData: true,
+    usdReturn, fxReturn, krwReturn,
+    buyP, curP: finalP, buyFx, curFx: finalFx,
+  };
+}
+
+// 카드별 가중 평균 수익 (비중 가중)
+function calculateCardReturn(actual){
+  let totalWeight = 0;
+  let weightedUsd = 0;
+  let weightedFx = 0;
+  let weightedKrw = 0;
+  let hasAnyData = false;
+  
+  actual.forEach(item => {
+    const r = calculateItemReturn(item);
+    if(!r.hasData) return;
+    const w = parseFloat(item.weight) || 0;
+    if(w <= 0) return;
+    
+    hasAnyData = true;
+    totalWeight += w;
+    weightedUsd += r.usdReturn * w;
+    weightedFx += r.fxReturn * w;
+    weightedKrw += r.krwReturn * w;
+  });
+  
+  if(!hasAnyData || totalWeight === 0) return null;
+  
+  return {
+    usdReturn: weightedUsd / totalWeight,
+    fxReturn: weightedFx / totalWeight,
+    krwReturn: weightedKrw / totalWeight,
+    coverage: totalWeight,  // 데이터 있는 비중 합계
+  };
+}
+
 function renderTrackerHistory(){
   const history = loadTrackerHistory();
   const container = document.getElementById('trackerHistoryContainer');
@@ -463,29 +520,41 @@ function renderTrackerHistory(){
   // 시간 역순 (최신 위)
   const sorted = [...history].reverse();
   
-  // 누적 수익률 계산
-  let cumSysReturn = 0;
-  let cumActualReturn = 0;
+  // 💵 누적 수익 계산 (USD + KRW + 환차익)
+  // 각 주의 수익을 누적 (단순 합계 - 복리 X 단순화)
+  let cumUsd = 0;
+  let cumFx = 0;
+  let cumKrw = 0;
+  let weeksWithData = 0;
+  
   for(const entry of history){
-    if(entry.weekResult){
-      cumSysReturn += (entry.weekResult.sysReturn || 0);
-      cumActualReturn += (entry.weekResult.actualReturn || 0);
+    const r = calculateCardReturn(entry.actual || []);
+    if(r){
+      cumUsd += r.usdReturn;
+      cumFx += r.fxReturn;
+      cumKrw += r.krwReturn;
+      weeksWithData++;
     }
   }
   
   let html = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
       <div style="padding:10px;background:rgba(0,212,255,.08);border-radius:6px;text-align:center;">
         <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">총 추적 주</div>
         <div style="font-size:1.2rem;color:var(--cy);font-weight:700;font-family:monospace;">${history.length}</div>
+        <div style="font-size:.5rem;color:var(--dm);margin-top:2px;">평가 ${weeksWithData}주</div>
       </div>
       <div style="padding:10px;background:rgba(0,229,118,.08);border-radius:6px;text-align:center;">
-        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">시스템 누적</div>
-        <div style="font-size:1.2rem;color:var(--gn);font-weight:700;font-family:monospace;">${cumSysReturn >= 0 ? '+' : ''}${(cumSysReturn*100).toFixed(2)}%</div>
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">종목 누적 (USD)</div>
+        <div style="font-size:1.1rem;color:var(--gn);font-weight:700;font-family:monospace;">${cumUsd >= 0 ? '+' : ''}${(cumUsd*100).toFixed(2)}%</div>
+      </div>
+      <div style="padding:10px;background:rgba(255,193,7,.08);border-radius:6px;text-align:center;">
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">환차익 누적</div>
+        <div style="font-size:1.1rem;color:var(--yl);font-weight:700;font-family:monospace;">${cumFx >= 0 ? '+' : ''}${(cumFx*100).toFixed(2)}%</div>
       </div>
       <div style="padding:10px;background:rgba(255,140,66,.08);border-radius:6px;text-align:center;">
-        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">실제 누적</div>
-        <div style="font-size:1.2rem;color:var(--or);font-weight:700;font-family:monospace;">${cumActualReturn >= 0 ? '+' : ''}${(cumActualReturn*100).toFixed(2)}%</div>
+        <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;">종합 누적 (KRW)</div>
+        <div style="font-size:1.2rem;color:var(--or);font-weight:700;font-family:monospace;">${cumKrw >= 0 ? '+' : ''}${(cumKrw*100).toFixed(2)}%</div>
       </div>
     </div>
   `;
@@ -512,6 +581,9 @@ function renderTrackerHistory(){
       .filter(a => !WATCHLIST_SET.has(a.ticker))
       .map(a => a.ticker);
     
+    // 💵 카드별 수익 분리 계산
+    const cardReturn = calculateCardReturn(actual);
+    
     html += `
       <div style="margin-bottom:14px;padding:14px;background:rgba(35,46,66,.5);border-radius:8px;border:1px solid rgba(0,212,255,.2);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -524,7 +596,40 @@ function renderTrackerHistory(){
           </div>
           <button onclick="deleteTrackerEntry(${history.length - 1 - idx})" style="background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.3);color:var(--rd);font-size:.55rem;padding:4px 8px;border-radius:4px;cursor:pointer;">🗑️</button>
         </div>
-        
+    `;
+    
+    // 💵 카드별 수익 분리 박스 (데이터 있을 때만)
+    if(cardReturn){
+      html += `
+        <div style="margin-bottom:10px;padding:10px;background:linear-gradient(135deg,rgba(0,229,118,.06),rgba(255,140,66,.04));border-radius:6px;border:1px solid rgba(0,229,118,.2);">
+          <div style="font-size:.55rem;color:var(--dm);letter-spacing:1px;margin-bottom:6px;">💵 이번 주 수익 분리 (가중 평균, 평가 비중 ${cardReturn.coverage.toFixed(0)}%)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div>
+              <div style="font-size:.55rem;color:var(--gn);">종목 (USD)</div>
+              <div style="font-size:.95rem;color:var(--gn);font-weight:700;font-family:monospace;">${cardReturn.usdReturn >= 0 ? '+' : ''}${(cardReturn.usdReturn*100).toFixed(2)}%</div>
+            </div>
+            <div>
+              <div style="font-size:.55rem;color:var(--yl);">환차익</div>
+              <div style="font-size:.95rem;color:var(--yl);font-weight:700;font-family:monospace;">${cardReturn.fxReturn >= 0 ? '+' : ''}${(cardReturn.fxReturn*100).toFixed(2)}%</div>
+            </div>
+            <div>
+              <div style="font-size:.55rem;color:var(--or);">종합 (KRW)</div>
+              <div style="font-size:.95rem;color:var(--or);font-weight:700;font-family:monospace;">${cardReturn.krwReturn >= 0 ? '+' : ''}${(cardReturn.krwReturn*100).toFixed(2)}%</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="margin-bottom:10px;padding:8px;background:rgba(180,180,180,.05);border-radius:6px;border:1px dashed rgba(180,180,180,.2);">
+          <div style="font-size:.55rem;color:var(--dm);text-align:center;">
+            💡 종목별 [💵] 버튼 클릭 → 매수가/환율 입력 시 수익 분리 표시
+          </div>
+        </div>
+      `;
+    }
+    
+    html += `
         <table style="width:100%;font-size:.65rem;color:var(--tx);border-collapse:collapse;">
           <thead><tr style="border-bottom:1px solid rgba(0,212,255,.2);color:var(--cy);">
             <th style="text-align:left;padding:6px 4px;">종목</th>
@@ -545,12 +650,16 @@ function renderTrackerHistory(){
       const actW = act?.weight || 0;
       const diff = actW - recW;
       const name = rec?.name || '';
+      const detailKey = `${entry.weekDate}_${ticker}`;
+      const r = act ? calculateItemReturn(act) : {hasData: false};
+      const hasDetail = act && act.buyPriceUSD;
       
       html += `
         <tr style="border-bottom:1px solid rgba(0,212,255,.05);">
           <td style="padding:5px 4px;">
             <span style="color:var(--tx);font-family:monospace;">${ticker}</span>
             ${name ? `<span style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
+            ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
           </td>
           <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
           <td style="padding:5px 4px;text-align:right;">
@@ -563,6 +672,7 @@ function renderTrackerHistory(){
             ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
           </td>
         </tr>
+        ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, false, '') : ''}
       `;
     });
     
@@ -577,12 +687,15 @@ function renderTrackerHistory(){
       const diff = actW - recW;
       const baseTicker = rec?.baseTicker || '';
       const name = rec?.name || '';
+      const detailKey = `${entry.weekDate}_${ticker}`;
+      const hasDetail = act && act.buyPriceUSD;
       
       html += `
         <tr style="border-bottom:1px solid rgba(255,68,85,.05);">
           <td style="padding:5px 4px;">
             <span style="color:var(--rd);font-weight:700;font-family:monospace;">${ticker} ⚡</span>
             ${name ? `<span style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
+            ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
           </td>
           <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
           <td style="padding:5px 4px;text-align:right;">
@@ -595,6 +708,7 @@ function renderTrackerHistory(){
             ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
           </td>
         </tr>
+        ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, true, baseTicker) : ''}
       `;
     });
     
@@ -605,12 +719,15 @@ function renderTrackerHistory(){
       const act = actualMap[ticker];
       const actW = act?.weight || 0;
       const isLev = act?.type === '3x';
+      const detailKey = `${entry.weekDate}_${ticker}`;
+      const hasDetail = act && act.buyPriceUSD;
       
       html += `
         <tr style="border-bottom:1px solid rgba(255,193,7,.05);">
           <td style="padding:5px 4px;">
             <span style="color:${isLev ? 'var(--rd)' : 'var(--yl)'};font-weight:${isLev ? '700' : '400'};font-family:monospace;">${ticker}${isLev ? ' ⚡' : ''}</span>
             <span style="color:var(--dm);font-size:.55rem;margin-left:4px;">(직접 추가)</span>
+            ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
           </td>
           <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
           <td style="padding:5px 4px;text-align:right;">
@@ -621,6 +738,7 @@ function renderTrackerHistory(){
           </td>
           <td style="padding:5px 4px;text-align:right;color:var(--dm);font-family:monospace;">-</td>
         </tr>
+        ${actW > 0 ? renderDetailRow(entry.weekDate, ticker, act || {}, isLev, '') : ''}
       `;
     });
     
@@ -701,7 +819,14 @@ function updateActualWeight(weekDate, ticker, weight, isLev, baseTicker){
   
   const existingIdx = entry.actual.findIndex(a => a.ticker === ticker);
   if(w > 0){
-    const data = {ticker, weight: w, type: isLev ? '3x' : '1x'};
+    // 기존 데이터 보존 (buyPriceUSD, buyFxRate 등)
+    const existing = existingIdx >= 0 ? entry.actual[existingIdx] : {};
+    const data = {
+      ...existing,    // 기존 보존
+      ticker,
+      weight: w,
+      type: isLev ? '3x' : '1x',
+    };
     if(baseTicker) data.baseTicker = baseTicker;
     
     if(existingIdx >= 0) entry.actual[existingIdx] = data;
@@ -713,6 +838,107 @@ function updateActualWeight(weekDate, ticker, weight, isLev, baseTicker){
   
   saveTrackerHistory(history);
   renderTrackerHistory();
+}
+
+// 💵 매수/현재 가격/환율 디테일 입력 행 렌더링
+function renderDetailRow(weekDate, ticker, item, isLev, baseTicker){
+  const detailKey = `${weekDate}_${ticker}`;
+  const r = calculateItemReturn(item);
+  
+  const buyP = item.buyPriceUSD || '';
+  const buyFx = item.buyFxRate || '';
+  const curP = item.currentPriceUSD || '';
+  const curFx = item.currentFxRate || '';
+  
+  // 디폴트로 숨김 (hasDetail이면 펼침)
+  const hasDetail = item.buyPriceUSD;
+  const displayStyle = hasDetail ? 'table-row' : 'none';
+  
+  let returnHtml = '';
+  if(r && r.hasData){
+    const usdPct = (r.usdReturn * 100).toFixed(2);
+    const fxPct = (r.fxReturn * 100).toFixed(2);
+    const krwPct = (r.krwReturn * 100).toFixed(2);
+    const usdColor = r.usdReturn >= 0 ? 'var(--gn)' : 'var(--rd)';
+    const fxColor = r.fxReturn >= 0 ? 'var(--yl)' : 'var(--rd)';
+    const krwColor = r.krwReturn >= 0 ? 'var(--or)' : 'var(--rd)';
+    
+    returnHtml = `
+      <div style="display:flex;gap:8px;margin-top:4px;font-size:.55rem;">
+        <span style="color:var(--dm);">📈 종목(USD):</span>
+        <span style="color:${usdColor};font-family:monospace;font-weight:700;">${r.usdReturn >= 0 ? '+' : ''}${usdPct}%</span>
+        <span style="color:var(--dm);">· 환차익:</span>
+        <span style="color:${fxColor};font-family:monospace;font-weight:700;">${r.fxReturn >= 0 ? '+' : ''}${fxPct}%</span>
+        <span style="color:var(--dm);">· 종합(KRW):</span>
+        <span style="color:${krwColor};font-family:monospace;font-weight:700;">${r.krwReturn >= 0 ? '+' : ''}${krwPct}%</span>
+      </div>
+    `;
+  }
+  
+  return `
+    <tr id="detail_${detailKey}" style="display:${displayStyle};background:rgba(0,229,118,.03);">
+      <td colspan="4" style="padding:8px 12px;border-bottom:1px solid rgba(0,229,118,.1);">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;font-size:.58rem;">
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">매수가 ($)</div>
+            <input type="number" value="${buyP}" step="0.01" min="0" placeholder="510.00"
+              onchange="updateItemDetail('${weekDate}','${ticker}','buyPriceUSD',this.value)"
+              style="width:100%;background:rgba(0,229,118,.06);border:1px solid rgba(0,229,118,.25);color:var(--gn);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">매수 환율 (₩/$)</div>
+            <input type="number" value="${buyFx}" step="0.1" min="0" placeholder="1350"
+              onchange="updateItemDetail('${weekDate}','${ticker}','buyFxRate',this.value)"
+              style="width:100%;background:rgba(0,229,118,.06);border:1px solid rgba(0,229,118,.25);color:var(--gn);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">현재가 ($)</div>
+            <input type="number" value="${curP}" step="0.01" min="0" placeholder="535.00"
+              onchange="updateItemDetail('${weekDate}','${ticker}','currentPriceUSD',this.value)"
+              style="width:100%;background:rgba(255,140,66,.06);border:1px solid rgba(255,140,66,.25);color:var(--or);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+          <div>
+            <div style="color:var(--dm);margin-bottom:2px;">현재 환율 (₩/$)</div>
+            <input type="number" value="${curFx}" step="0.1" min="0" placeholder="1410"
+              onchange="updateItemDetail('${weekDate}','${ticker}','currentFxRate',this.value)"
+              style="width:100%;background:rgba(255,140,66,.06);border:1px solid rgba(255,140,66,.25);color:var(--or);padding:3px 4px;border-radius:3px;font-family:monospace;font-size:.6rem;">
+          </div>
+        </div>
+        ${returnHtml}
+      </td>
+    </tr>
+  `;
+}
+
+// 디테일 행 토글
+function toggleDetail(detailKey){
+  const row = document.getElementById('detail_' + detailKey);
+  if(!row) return;
+  row.style.display = (row.style.display === 'none' || !row.style.display) ? 'table-row' : 'none';
+}
+
+// 매수가/환율 등 디테일 필드 저장
+function updateItemDetail(weekDate, ticker, field, value){
+  const v = parseFloat(value);
+  let history = loadTrackerHistory();
+  const idx = history.findIndex(h => h.weekDate === weekDate);
+  if(idx < 0) return;
+  
+  const entry = history[idx];
+  if(!entry.actual) return;
+  
+  const itemIdx = entry.actual.findIndex(a => a.ticker === ticker);
+  if(itemIdx < 0) return;
+  
+  // 값 저장 (NaN/0 처리)
+  if(isNaN(v) || v <= 0){
+    delete entry.actual[itemIdx][field];
+  } else {
+    entry.actual[itemIdx][field] = v;
+  }
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();  // 수익 분리 즉시 반영
 }
 
 function deleteTrackerEntry(idx){
@@ -763,7 +989,9 @@ function addEtcTicker(weekDate){
   if(!entry.actual) entry.actual = [];
   
   const existingIdx = entry.actual.findIndex(a => a.ticker === ticker);
-  const data = {ticker, weight, type, etc: true};
+  // 기존 데이터 보존 (buyPriceUSD 등)
+  const existing = existingIdx >= 0 ? entry.actual[existingIdx] : {};
+  const data = {...existing, ticker, weight, type, etc: true};
   
   if(existingIdx >= 0) entry.actual[existingIdx] = data;
   else entry.actual.push(data);
