@@ -201,6 +201,25 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0;}
       ✓ 실제 매수 비중 입력 → 차이 계산<br>
       ✓ 다음주에 실제 수익률 평가
     </div>
+    
+    <!-- 📥 portfolio.json import -->
+    <div style="margin-bottom:14px;padding:12px;background:linear-gradient(135deg,rgba(0,229,118,.06),rgba(0,212,255,.04));border-radius:8px;border:1px solid rgba(0,229,118,.3);">
+      <div style="font-size:.65rem;color:var(--gn);font-weight:700;margin-bottom:8px;letter-spacing:1px;">
+        📥 portfolio.json 자동 가져오기
+      </div>
+      <div style="font-size:.6rem;color:var(--dm);line-height:1.5;margin-bottom:8px;">
+        실제 보유 포트폴리오를 JSON으로 업로드 → 이번 주 actual에 자동 반영<br>
+        ✓ 비중 자동 계산 (총자산 기준)<br>
+        ✓ 평균 매수가 + 환율 자동 입력<br>
+        ✓ 워치리스트 종목 → 워치리스트 / 외 종목 → ETC 자동 분류
+      </div>
+      <input type="file" id="portfolioJsonFile" accept=".json" style="display:none;" onchange="importPortfolioJson(event)">
+      <button onclick="document.getElementById('portfolioJsonFile').click()" 
+        style="background:linear-gradient(135deg,rgba(0,229,118,.15),rgba(0,212,255,.1));border:1px solid rgba(0,229,118,.4);color:var(--gn);padding:8px 14px;border-radius:6px;font-size:.7rem;cursor:pointer;font-weight:700;width:100%;">
+        📁 portfolio.json 파일 선택
+      </button>
+    </div>
+    
     <div id="trackerHistoryContainer">
       <div style="text-align:center;padding:30px;color:var(--dm);font-size:.75rem;">
         📭 데이터 없음<br>
@@ -383,6 +402,11 @@ hr{border:none;border-top:1px solid var(--bd);margin:14px 0;}
       <button class="btn btn-sec" onclick="document.getElementById('importFile').click()">📤 JSON 불러오기</button>
     </div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <div class="note" style="font-size:.6rem;color:var(--dm);margin-top:8px;line-height:1.6;">
+      💡 <strong>두 가지 형식 자동 감지:</strong><br>
+      • <strong>저널 데이터</strong> (settings/trades/...) → 거래 기록 복원<br>
+      • <strong>portfolio.json</strong> (보유 포트폴리오) → 주간 추적 actual에 반영
+    </div>
     <div class="note warn">⚠️ 브라우저 캐시 삭제 시 데이터 사라짐 · 정기적으로 JSON 백업하세요.</div>
   </div>
 
@@ -653,6 +677,16 @@ function renderTrackerHistory(){
       const detailKey = `${entry.weekDate}_${ticker}`;
       const r = act ? calculateItemReturn(act) : {hasData: false};
       const hasDetail = act && act.buyPriceUSD;
+      const hasKR = act && act.hasKR;
+      const krW = act?.krWeight || 0;
+      const usW = actW - krW;  // 미장 부분
+      const mappedFrom = act?.mappedFrom || [];  // 자동 매핑된 종목들
+      
+      let mappedHtml = '';
+      if(mappedFrom.length > 0){
+        const mappedNames = mappedFrom.map(m => `${m.ticker}(${m.weight.toFixed(1)}%)`).join('+');
+        mappedHtml = `<span style="margin-left:4px;color:var(--pu);font-size:.55rem;background:rgba(181,123,238,.1);padding:1px 5px;border-radius:3px;" title="자동 매핑: ${mappedFrom.map(m => m.name).join(', ')}">🔗 ${mappedNames}</span>`;
+      }
       
       html += `
         <tr style="border-bottom:1px solid rgba(0,212,255,.05);">
@@ -660,6 +694,8 @@ function renderTrackerHistory(){
             <span style="color:var(--tx);font-family:monospace;">${ticker}</span>
             ${name ? `<span style="color:var(--dm);font-size:.55rem;margin-left:4px;">${name}</span>` : ''}
             ${actW > 0 ? `<button onclick="toggleDetail('${detailKey}')" style="margin-left:4px;background:${hasDetail ? 'rgba(0,229,118,.15)' : 'rgba(255,140,66,.1)'};border:1px solid ${hasDetail ? 'rgba(0,229,118,.4)' : 'rgba(255,140,66,.3)'};color:${hasDetail ? 'var(--gn)' : 'var(--or)'};font-size:.55rem;padding:1px 5px;border-radius:3px;cursor:pointer;">💵${hasDetail ? '✓' : ''}</button>` : ''}
+            ${hasKR ? `<span style="margin-left:4px;color:var(--cy);font-size:.55rem;background:rgba(0,212,255,.1);padding:1px 5px;border-radius:3px;" title="${act.krName || ''}">🇰🇷 ${krW.toFixed(1)}%</span>` : ''}
+            ${mappedHtml}
           </td>
           <td style="padding:5px 4px;text-align:right;color:${recW > 0 ? 'var(--gn)' : 'var(--dm)'};font-family:monospace;">${recW}%</td>
           <td style="padding:5px 4px;text-align:right;">
@@ -667,6 +703,7 @@ function renderTrackerHistory(){
               onchange="updateActualWeight('${entry.weekDate}', '${ticker}', this.value, false, '')"
               style="width:50px;background:rgba(255,140,66,.08);border:1px solid rgba(255,140,66,.3);color:var(--or);text-align:right;padding:3px 4px;border-radius:3px;font-size:.62rem;font-family:monospace;">
             <span style="color:var(--dm);font-size:.55rem;">%</span>
+            ${hasKR ? `<div style="font-size:.5rem;color:var(--dm);margin-top:1px;">🇺🇸${usW.toFixed(1)}+🇰🇷${krW.toFixed(1)}</div>` : ''}
           </td>
           <td style="padding:5px 4px;text-align:right;color:${diff > 0 ? 'var(--cy)' : diff < 0 ? 'var(--rd)' : 'var(--dm)'};font-family:monospace;">
             ${diff !== 0 ? (diff > 0 ? '+' : '') + diff + '%' : '-'}
@@ -1004,6 +1041,34 @@ function addEtcTicker(weekDate){
   weightInput.value = '';
 }
 
+// 📥 portfolio.json 자동 가져오기 (📅 주간 추적 탭 버튼)
+function importPortfolioJson(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = JSON.parse(e.target.result);
+      
+      if(!data.portfolio){
+        alert('❌ 잘못된 형식: portfolio 키가 없습니다.\n예상 형식:\n{ "portfolio": { "exchange_rate_krw_per_usd": 1485, "domestic_etf": [...], "foreign_etf": [...], "summary": {...} } }');
+        return;
+      }
+      
+      // 통합 함수 호출 (alias 매핑 포함)
+      importPortfolioJsonData(data);
+      
+      // file input 초기화 (같은 파일 다시 선택 가능)
+      event.target.value = '';
+    } catch(err){
+      alert('❌ JSON 파싱 실패: ' + err.message);
+      console.error('Import 에러:', err);
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ===== 거래 추가 =====
 document.getElementById('tAction').addEventListener('change', function(){
   document.getElementById('pnlRow').style.display = this.value==='sell' ? 'grid' : 'none';
@@ -1134,16 +1199,227 @@ function importData(e){
   reader.onload = (ev) => {
     try{
       const imported = JSON.parse(ev.target.result);
-      if(!confirm('기존 데이터를 덮어쓰시겠습니까?')) return;
-      DATA = imported;
-      saveData(DATA);
-      alert('✅ 복원 완료');
-      location.reload();
+      
+      // 🔍 형식 자동 감지
+      // portfolio.json 형식인지 (보유 포트폴리오)
+      if(imported.portfolio && (imported.portfolio.foreign_etf || imported.portfolio.domestic_etf)){
+        if(!confirm('📊 portfolio.json 형식 감지!\n주간 추적 탭의 actual에 반영할까요?\n\n(저널 데이터 덮어쓰기 X, 매수 데이터만 추가)')) return;
+        
+        // importPortfolioJson 직접 처리 (event reuse)
+        importPortfolioJsonData(imported);
+        
+        // 자동 탭 전환
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector('.tab[onclick*="tracker"]').classList.add('active');
+        document.getElementById('tab-tracker').classList.add('active');
+        renderTrackerHistory();
+        return;
+      }
+      
+      // 저널 자체 데이터 형식인지 (settings/trades/valuations/weekly)
+      if(imported.settings || imported.trades || imported.valuations || imported.weekly){
+        if(!confirm('📓 저널 데이터 형식 감지\n기존 데이터를 덮어쓰시겠습니까?')) return;
+        DATA = imported;
+        saveData(DATA);
+        alert('✅ 복원 완료');
+        location.reload();
+        return;
+      }
+      
+      // 알 수 없는 형식
+      alert('❌ 알 수 없는 JSON 형식입니다.\n\n지원 형식:\n1. 저널 데이터 (settings/trades/valuations/weekly)\n2. portfolio.json (portfolio.foreign_etf/domestic_etf)');
     }catch(err){
       alert('❌ 파일 형식 오류: ' + err.message);
     }
   };
   reader.readAsText(file);
+}
+
+// portfolio.json 데이터 처리 (importPortfolioJson에서 분리)
+function importPortfolioJsonData(data){
+  const p = data.portfolio;
+  if(!p) return;
+  
+  const fxRate = p.exchange_rate_krw_per_usd;
+  const total = p.summary?.grand_total_krw || 0;
+  
+  if(!fxRate || !total){
+    alert('❌ 환율 또는 총자산 정보가 없습니다.');
+    return;
+  }
+  
+  // 워치리스트
+  const WATCHLIST_1X = ['QQQ','SMH','ITA','URA','GDX','IBB','COPX','TLT','VNQ','XLF'];
+  const WATCHLIST_3X = ['TQQQ','SOXL','NUGT','LABU','URAA','FAS'];
+  const WATCHLIST_SET = new Set([...WATCHLIST_1X, ...WATCHLIST_3X]);
+  
+  // 🎯 유사 ETF 매핑 - 자동으로 워치리스트 종목으로 매칭
+  // (AIQ는 인공지능 ETF지만 QQQ와 비슷한 빅테크 추종)
+  const ALIAS_MAP = {
+    'AIQ': 'QQQ',     // 인공지능 ETF → QQQ로 매칭
+    'IYW': 'QQQ',     // iShares 미국 기술 → QQQ
+    'XLK': 'QQQ',     // Technology Select → QQQ
+    'VGT': 'QQQ',     // Vanguard Tech → QQQ
+    'SOXX': 'SMH',    // iShares 반도체 → SMH
+    'GLD': 'GDX',     // 금 현물 → GDX (금광주 대용)
+    'SLV': 'GDX',     // 은 → GDX (금광주 대용)
+    'XLF': 'XLF',     // 동일
+    'KBE': 'XLF',     // 은행 → 금융
+    'IBB': 'IBB',
+    'XBI': 'IBB',     // 생명공학 → IBB (바이오)
+  };
+  
+  function resolveTicker(ticker){
+    return ALIAS_MAP[ticker] || ticker;
+  }
+  
+  let history = loadTrackerHistory();
+  let targetEntry;
+  if(history.length > 0){
+    targetEntry = history[history.length - 1];
+  } else {
+    const now = new Date();
+    const dow = now.getDay();
+    const lastSat = new Date(now);
+    if(dow !== 6){
+      const back = (dow + 1) % 7;
+      lastSat.setDate(now.getDate() - back);
+    }
+    const weekDate = lastSat.toISOString().substring(0, 10);
+    targetEntry = {
+      weekDate, timestamp: Date.now(),
+      spyState: 'neutral', monthlyOk: true,
+      totalBuy1x: 0, totalBuy3x: 0, cash: 0,
+      recommended: [], actual: [], weekResult: null,
+    };
+    history.push(targetEntry);
+  }
+  
+  if(!targetEntry.actual) targetEntry.actual = [];
+  
+  let imported1x = 0, imported3x = 0, importedEtc = 0, mappedCount = 0;
+  
+  // 미장 ETF
+  if(p.foreign_etf){
+    p.foreign_etf.forEach(item => {
+      const origTicker = item.ticker;
+      const ticker = resolveTicker(origTicker);  // alias 매핑
+      const isMapped = ticker !== origTicker;
+      const weight = (item.total_cost_krw / total) * 100;
+      const buyPriceUSD = item.avg_price_usd;
+      const buyFxRate = item.total_cost_krw / item.total_cost_usd;
+      const isLev = WATCHLIST_3X.includes(ticker);
+      const isWatch = WATCHLIST_SET.has(ticker);
+      
+      const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
+      const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
+      
+      // 매핑된 경우 비중 합산 (예: AIQ + QQQ → QQQ)
+      const prevWeight = (isMapped && existing.weight) ? existing.weight : 0;
+      const totalWeight = Math.round((prevWeight + weight) * 100) / 100;
+      
+      const data = {
+        ...existing,
+        ticker,
+        weight: totalWeight,
+        type: isLev ? '3x' : '1x',
+        buyPriceUSD: Math.round(buyPriceUSD * 10000) / 10000,
+        buyFxRate: Math.round(buyFxRate),
+      };
+      
+      if(!isWatch) data.etc = true;
+      
+      if(isMapped){
+        // 매핑 정보 저장 (예: QQQ에 AIQ도 있다)
+        if(!data.mappedFrom) data.mappedFrom = [];
+        data.mappedFrom.push({
+          ticker: origTicker,
+          weight: Math.round(weight * 100) / 100,
+          name: item.name,
+        });
+        mappedCount++;
+      }
+      
+      if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
+      else targetEntry.actual.push(data);
+      
+      if(isLev) imported3x++;
+      else if(isWatch) imported1x++;
+      else importedEtc++;
+    });
+  }
+  
+  // 국장 ETF
+  if(p.domestic_etf){
+    p.domestic_etf.forEach(item => {
+      const weight = (item.total_cost_krw / total) * 100;
+      const alias = item.alias;
+      
+      if(alias && WATCHLIST_SET.has(alias)){
+        const ticker = alias;
+        const isLev = WATCHLIST_3X.includes(ticker);
+        
+        const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
+        const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
+        
+        const prevWeight = existing.weight || 0;
+        const totalWeight = Math.round((prevWeight + weight) * 100) / 100;
+        
+        const data = {
+          ...existing,
+          ticker,
+          weight: totalWeight,
+          type: isLev ? '3x' : '1x',
+          hasKR: true,
+          krWeight: weight,
+          krAvgPriceKRW: item.avg_price_krw,
+          krName: item.name,
+        };
+        
+        if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
+        else targetEntry.actual.push(data);
+        
+        if(isLev) imported3x++;
+        else imported1x++;
+      } else {
+        const ticker = `KR_${(alias || item.name).slice(0, 18)}`.replace(/\s+/g, '_');
+        
+        const existingIdx = targetEntry.actual.findIndex(a => a.ticker === ticker);
+        const existing = existingIdx >= 0 ? targetEntry.actual[existingIdx] : {};
+        
+        const data = {
+          ...existing,
+          ticker,
+          name: item.name,
+          weight: Math.round(weight * 100) / 100,
+          type: '1x',
+          etc: true,
+          isKorean: true,
+          buyPriceKRW: item.avg_price_krw,
+        };
+        
+        if(existingIdx >= 0) targetEntry.actual[existingIdx] = data;
+        else targetEntry.actual.push(data);
+        
+        importedEtc++;
+      }
+    });
+  }
+  
+  saveTrackerHistory(history);
+  renderTrackerHistory();
+  
+  alert(`✅ 포트폴리오 import 완료!\n\n` +
+    `📅 주차: ${targetEntry.weekDate}\n` +
+    `💱 환율: ${fxRate}원/$\n` +
+    `💰 총자산: ${total.toLocaleString()}원\n\n` +
+    `반영:\n` +
+    `  1배 ETF (워치리스트): ${imported1x}종\n` +
+    `  3배 ETF (워치리스트): ${imported3x}종\n` +
+    `  ETC (워치리스트 외): ${importedEtc}종\n` +
+    (mappedCount > 0 ? `\n🎯 자동 매핑: ${mappedCount}종 (예: AIQ → QQQ)` : '')
+  );
 }
 
 function resetAll(){
