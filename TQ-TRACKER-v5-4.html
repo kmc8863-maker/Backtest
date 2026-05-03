@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>TQWD 트래커</title>
+<style>
+:root {
+  --bg:#0f1419; --card:#1c2230; --border:#2a3348;
+  --txt:#cfd8dc; --sub:#8aa0b8; --acc:#ffd54f;
+  --gn:#4caf50; --rd:#f44336; --or:#ff9800; --cy:#4dd0e1;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:-apple-system,'Segoe UI',sans-serif; background:var(--bg); color:var(--txt); padding:8px; font-size:14px; -webkit-tap-highlight-color:transparent; }
+h1 { font-size:18px; color:var(--acc); margin-bottom:4px; }
+.sub { color:var(--sub); font-size:12px; margin-bottom:12px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
+.card h2 { font-size:14px; color:var(--acc); margin-bottom:8px; }
+.status-big { font-size:22px; font-weight:700; padding:14px; text-align:center; border-radius:8px; }
+.status-on { background:rgba(76,175,80,0.15); color:var(--gn); border:2px solid var(--gn); }
+.status-off { background:rgba(244,67,54,0.15); color:var(--rd); border:2px solid var(--rd); }
+.kvgrid { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:13px; margin-top:8px; }
+.kvgrid .k { color:var(--sub); }
+.kvgrid .v { color:var(--txt); font-weight:600; }
+canvas { width:100%; background:#0a0e15; border-radius:4px; display:block; }
+.chart-label { color:var(--acc); font-size:11px; margin:6px 0 3px; font-weight:600; }
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th, td { padding:6px 4px; text-align:left; border-bottom:1px solid var(--border); }
+th { color:var(--sub); font-weight:600; font-size:10px; }
+td input[type="text"], td input[type="number"] { width:100%; background:#0a0e15; color:var(--txt); border:1px solid var(--border); border-radius:3px; padding:3px 5px; font-size:11px; }
+td input:focus { border-color:var(--acc); outline:none; }
+.tag-buy { color:var(--gn); font-weight:600; }
+.tag-sell { color:var(--rd); font-weight:600; }
+.tag-partial { color:var(--or); font-weight:600; }
+.tag-pending { color:var(--acc); font-weight:600; background:rgba(255,213,79,0.15); padding:2px 5px; border-radius:3px; font-size:10px; }
+.btn { background:var(--cy); color:#000; border:none; padding:8px 14px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; }
+.btn:active { opacity:0.7; }
+.btn-sec { background:var(--border); color:var(--txt); }
+.cb { width:18px; height:18px; cursor:pointer; }
+.alert-banner { padding:10px; border-radius:6px; margin-bottom:10px; font-weight:600; font-size:13px; }
+.alert-buy { background:rgba(76,175,80,0.2); color:var(--gn); border-left:4px solid var(--gn); }
+.alert-sell { background:rgba(244,67,54,0.2); color:var(--rd); border-left:4px solid var(--rd); }
+.alert-hold { background:rgba(138,160,184,0.1); color:var(--sub); border-left:4px solid var(--sub); }
+.scroll-x { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.summary-line { font-size:13px; padding:6px 0; color:var(--txt); }
+.summary-line b { color:var(--acc); }
+.row-flex { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.mode-info { font-size:11px; color:var(--sub); padding:6px 8px; background:#0a0e15; border-radius:4px; margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1>📊 TQWD 트래커</h1>
+<div class="sub">v5 · 하이브리드 모드 (평상시 Full + 위기 Vol cap) · v9 엔진 · <span id="lastUpd">-</span></div>
+
+<div class="tabs" style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+  <button id="tabMain" class="tab-btn active" onclick="switchTab('main')" style="background:var(--cy);color:#000;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;flex:1;">📊 트래커</button>
+  <button id="tabGuide" class="tab-btn" onclick="switchTab('guide')" style="background:var(--border);color:var(--txt);border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;flex:1;">📖 운영 방식</button>
+</div>
+
+<div id="pageMain">
+
+<div id="alertBanner"></div>
+
+<div class="card">
+  <div id="statusDisplay" class="status-big status-off">로딩 중...</div>
+  <div class="kvgrid">
+    <span class="k">QQQ 가격</span><span class="v" id="latestPrice">-</span>
+    <span class="k">200d EMA</span><span class="v" id="ema200val">-</span>
+    <span class="k">Vol 20d</span><span class="v" id="vol20val">-</span>
+    <span class="k">Mom 20 (TQQQ)</span><span class="v" id="mom20val">-</span>
+    <span class="k">Mom 22 (QQQU)</span><span class="v" id="mom22val">-</span>
+    <span class="k" style="color:#76ff03;">TQQQ 권장</span><span class="v" id="targetWtTqqq">-</span>
+    <span class="k" style="color:#76ff03;">QQQU 권장</span><span class="v" id="targetWtQqqu">-</span>
+  </div>
+  <div class="mode-info">
+    📌 <b>5050 전략</b>: TQQQ 50% (Mom 20) + QQQU 50% (Mom 22)<br>
+    📌 진입: 다음날 미국 09:30 시초가 (한국 23:00) 매수<br>
+    📌 청산: 다음날 시초가 매도<br>
+    📌 Stop: QQQ 일별 -5% → 자동 매도 (TQQQ -15%, QQQU -10%)<br>
+    📌 권장 = 각 종목 풀 (5천만) 내 비중. Vol cap (15%/vol20)
+  </div>
+</div>
+
+<div class="card">
+  <h2>📈 라이브 차트 (2025년~)</h2>
+  <div id="liveSummary" class="summary-line">로딩 중...</div>
+  <div class="chart-label">QQQ 가격 + 진입/청산 마커</div>
+  <canvas id="chartPrice" height="240"></canvas>
+  <div class="chart-label">TQWD 누적 자산 (2025-01-01 = 1억)</div>
+  <canvas id="chartEquity" height="180"></canvas>
+</div>
+
+<div class="card">
+  <h2>📋 매매 내역 + 실제 체결 기록</h2>
+  <div class="sub" style="margin-bottom:8px;">v9 엔진 시뮬 매매 + 실제 체결 가격/수량 (직접 입력) · 자동 저장</div>
+  <div class="scroll-x">
+    <table id="tradeTable">
+      <thead>
+        <tr>
+          <th>날짜</th>
+          <th>신호</th>
+          <th>시뮬가</th>
+          <th>비중</th>
+          <th style="background:rgba(255,213,79,0.1);">✓ 체결</th>
+          <th style="background:rgba(255,213,79,0.1);">실제 가격</th>
+          <th style="background:rgba(255,213,79,0.1);">수량(주)</th>
+          <th style="background:rgba(255,213,79,0.1);">메모</th>
+        </tr>
+      </thead>
+      <tbody id="tradeBody"></tbody>
+    </table>
+  </div>
+  <div class="row-flex" style="margin-top:10px;">
+    <button class="btn btn-sec" onclick="exportCSV()">💾 CSV 내보내기</button>
+    <button class="btn btn-sec" onclick="clearUserInputs()" style="background:rgba(244,67,54,0.2);color:var(--rd);">🗑️ 입력 초기화</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>⚙️ 데이터</h2>
+  <div class="row-flex">
+    <button class="btn" onclick="refreshData()">🔄 데이터 갱신</button>
+    <span class="sub" id="cacheStatus">-</span>
+  </div>
+</div>
+
+</div><!-- /pageMain -->
+
+<div id="pageGuide" style="display:none;">
+
+<div class="card">
+  <h2>🎯 5050 전략 개요</h2>
+  <p style="line-height:1.7;font-size:13px;color:var(--txt);">
+    <b style="color:var(--acc);">TQQQ 50% + QQQU 50% 분산 운영.</b><br>
+    QQQ 200d EMA 신호로 양쪽 모두 매매. Mom은 다름.<br><br>
+    <span style="color:var(--cy);">검증 결과 (18년 백테):</span><br>
+    • CAGR 28.6% / MDD -35.4% / RAR 0.81<br>
+    • 1억 → 약 100억 추정<br>
+    • <b>강건성 7/7 통과</b> ⭐<br>
+    • Mom 강건: TQQQ 86% / QQQU 94% (TQQQ 단독은 71%)<br><br>
+    <span style="color:var(--gn);">5050 분산 효과:</span><br>
+    • TQQQ Mom 절벽 위험 → 분산으로 완화<br>
+    • AUM 위험 분산 (QQQU $75M)<br>
+    • MDD -9%p 안전 (TQQQ 단독 -44% → -35%)<br>
+    • RAR 우월 (0.81 vs 0.78)
+  </p>
+</div>
+
+<div class="card">
+  <h2>📊 신호 규칙 (양쪽 모두 QQQ에서)</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--gn);">TQQQ 신호 (Mom 20):</b><br>
+    1. QQQ 종가 &gt; 200일 EMA<br>
+    2. <b>20일</b> 모멘텀 &gt; 0<br><br>
+    
+    <b style="color:var(--gn);">QQQU 신호 (Mom 22):</b><br>
+    1. QQQ 종가 &gt; 200일 EMA<br>
+    2. <b>22일</b> 모멘텀 &gt; 0<br><br>
+    
+    <b style="color:var(--cy);">차이:</b> Mom 기간만 다름 (20 vs 22)<br>
+    → 같은 추세지만 진입/청산 시점 살짝 다름<br>
+    → 분산 효과 + 강건성 우월
+  </p>
+</div>
+
+<div class="card">
+  <h2>📈 매수/매도 시점</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--gn);">매수:</b><br>
+    • 신호 ON 발견 → <b>다음날 미국 09:30 시초가</b> 매수<br>
+    • 한국 시간: <b>23:00 (서머타임 22:30)</b><br><br>
+    
+    <b style="color:var(--rd);">매도:</b><br>
+    • 신호 OFF 발견 → 다음날 시초가 매도<br>
+    • 100% 청산<br><br>
+    
+    <b style="color:var(--cy);">매수 비중 (Vol cap 모드):</b><br>
+    • 비중 = volTarget(15%) / 현재 vol20<br>
+    • 변동성 큰 시기엔 비중 점진 진입 (PARTIAL_BUY)<br>
+    • 안정 시기엔 100% 풀매수<br><br>
+    
+    <b style="color:var(--rd);">⚡ 일별 -5% Stop Loss:</b><br>
+    • QQQ가 하루 -5% 이상 하락 시 즉시 매도<br>
+    • TQQQ -15%, QQQU -10% 손실에서 차단
+  </p>
+</div>
+
+<div class="card">
+  <h2>💰 자본 배분</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--cy);">시작 시 비중:</b><br>
+    • TQQQ 50% (예: 5천만)<br>
+    • QQQU 50% (예: 5천만)<br><br>
+    
+    <b style="color:var(--cy);">신호별 매매:</b><br>
+    • TQQQ 신호 ON → TQQQ 5천만 매수<br>
+    • QQQU 신호 ON → QQQU 5천만 매수<br>
+    • 양쪽 독립적으로 매매<br><br>
+    
+    <b style="color:var(--gn);">주기적 리밸런싱:</b><br>
+    • 분기마다 또는 큰 변동 시<br>
+    • 한쪽이 ±20% 차이 시 50/50 회복<br>
+    • TQQQ 60% / QQQU 40% 같이 변동 → 50/50 재조정
+  </p>
+</div>
+
+<div class="card">
+  <h2>⏰ 한국 운영 일정</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--cy);">매일 한국 23:00 (서머타임 22:30):</b><br>
+    1. 트래커 열기 (이 앱)<br>
+    2. <b>TQQQ 신호 확인</b> (Mom 20):<br>
+    &nbsp;&nbsp;• 🟢 ON → TQQQ 시초가 매수<br>
+    &nbsp;&nbsp;• 🔴 OFF → TQQQ 시초가 매도<br>
+    3. <b>QQQU 신호 확인</b> (Mom 22):<br>
+    &nbsp;&nbsp;• 🟢 ON → QQQU 시초가 매수<br>
+    &nbsp;&nbsp;• 🔴 OFF → QQQU 시초가 매도<br>
+    4. 매매 후 트래커에 입력<br><br>
+    
+    <b style="color:var(--cy);">매매 빈도:</b><br>
+    • 평상시: 양쪽 합쳐 월 2-3회<br>
+    • 위기 시: 추가 비중 조정
+  </p>
+</div>
+
+<div class="card">
+  <h2>📈 리스크 / 수익 특성 (5050 18년)</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--gn);">기대 수익 (18년 백테):</b><br>
+    • CAGR +28.6% / RAR 0.81<br>
+    • 1억 → 약 100억 추정<br>
+    • Walk-Forward 5/6 통과 (83%)<br>
+    • 양수 연도 13/18 (72%)<br><br>
+    
+    <b style="color:var(--rd);">리스크:</b><br>
+    • <b>MDD -35.4%</b> (TQQQ 단독 -44%보다 안전)<br>
+    • <b>휩소 시기</b>: 2022, 2026 1~4월<br>
+    • <b>한쪽 약세 시기</b>: 2026 4개월 QQQU +1.9%<br>
+    • <b>운영 의지</b>: 손실 시기 시스템 신뢰<br><br>
+    
+    <b style="color:var(--acc);">검증된 위기 시기:</b><br>
+    • 리먼 (2008): -1.5% (선방)<br>
+    • 코로나 (2020): +68.3% (강세 잡음)<br>
+    • 2022 약세: -12.5% (선방)<br>
+    • 2025 트럼프: +30.1% (압도)
+  </p>
+</div>
+
+<div class="card">
+  <h2>🛡️ 강건성 평가 (7/7 통과)</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--gn);">검증 항목:</b><br>
+    ✅ OOS Test/Train: 1.79 (>0.7)<br>
+    ✅ Walk-Forward: 5/6 (83%)<br>
+    ✅ 연도별 양수: 13/18 (72%)<br>
+    ✅ TQQQ Mom 강건: 86%<br>
+    ✅ QQQU Mom 강건: 94%<br>
+    ✅ RAR: 0.81<br>
+    ✅ MDD: -35.4%<br><br>
+    
+    <b style="color:var(--cy);">TQQQ 단독 vs 5050:</b><br>
+    • TQQQ 단독: 7/8 통과 (Mom 절벽 FAIL)<br>
+    • 5050: 7/7 통과 ⭐<br>
+    • 5050이 22% 더 강건
+  </p>
+</div>
+
+<div class="card">
+  <h2>⚠️ 절대 하지 말 것</h2>
+  <p style="line-height:1.7;font-size:13px;color:var(--txt);">
+    <span style="color:var(--rd);">❌ 신호 무시하고 직접 판단:</span> 시스템 파괴<br>
+    <span style="color:var(--rd);">❌ 손실 시기 중단:</span> 회복기 알파 미스<br>
+    <span style="color:var(--rd);">❌ 신호 OFF인데 보유:</span> 큰 위기 직격<br>
+    <span style="color:var(--rd);">❌ 한쪽만 운영:</span> 분산 효과 X<br>
+    <span style="color:var(--rd);">❌ Stop loss 무시:</span> 큰 폭락 보호 X<br>
+    <span style="color:var(--rd);">❌ 모든 자산 투입:</span> 마음 흔들림 → 운영 중단<br><br>
+    
+    <span style="color:var(--gn);">✅ 추천 자본 비율:</span><br>
+    • 전체 자산의 10-30% (학습 시기)<br>
+    • 마음 단단함 검증 후 늘리기<br>
+    • QQQU AUM 위험 = 50% 한도 (조기 폐쇄 가능)
+  </p>
+</div>
+
+<div class="card">
+  <h2>📋 매매 체크리스트</h2>
+  <p style="line-height:1.7;font-size:13px;">
+    <b style="color:var(--cy);">매일 23:00 양쪽 신호 확인:</b><br>
+    □ TQQQ Mom 20 신호 ON/OFF?<br>
+    □ QQQU Mom 22 신호 ON/OFF?<br>
+    □ 권장 비중 확인 (Vol cap)<br><br>
+    
+    <b style="color:var(--gn);">매수 시:</b><br>
+    □ 한국 23:00 시초가 시장가<br>
+    □ 권장 비중 확인 (보통 50% 자본 풀)<br>
+    □ 트래커에 실제가/수량 입력<br><br>
+    
+    <b style="color:var(--rd);">매도 시:</b><br>
+    □ 100% 해당 자산 청산<br>
+    □ 또는 일별 -5% Stop loss 자동<br>
+    □ 트래커에 실제가/수량 입력<br><br>
+    
+    <b style="color:var(--or);">분기 리밸런싱:</b><br>
+    □ TQQQ vs QQQU 비중 차이 확인<br>
+    □ ±20% 차이 시 50/50 재조정
+  </p>
+</div>
+
+<div class="card">
+  <h2>🎯 한 줄 요약</h2>
+  <p style="line-height:1.8;font-size:14px;text-align:center;color:var(--acc);font-weight:600;">
+    QQQ 200d EMA + Mom 20 → TQQQ 50% 매매<br>
+    QQQ 200d EMA + Mom 22 → QQQU 50% 매매<br>
+    QQQ 일별 -5% → 자동 매도<br>
+    Vol cap 모드 (변동성 따라 비중 자동 조정)<br>
+    18년 검증 / 7/7 강건성 / MDD -35%
+  </p>
+</div>
+  </p>
+</div>
+
+</div><!-- /pageGuide -->
+
+<script>
+function buildEMA(closes, period) {
+  const N = closes.length;
+  const ema = new Array(N).fill(null);
+  const k = 2 / (period + 1);
+  if (N >= period) {
+    let sum = 0;
+    for (let i = 0; i < period; i++) sum += closes[i];
+    ema[period - 1] = sum / period;
+    for (let i = period; i < N; i++) ema[i] = closes[i] * k + ema[i-1] * (1 - k);
+  }
+  return ema;
+}
+
+function buildMom(closes, period) {
+  const N = closes.length;
+  const mom = new Array(N).fill(null);
+  for (let i = period; i < N; i++) mom[i] = closes[i] / closes[i - period] - 1;
+  return mom;
+}
+
+function buildVol(closes, period) {
+  const N = closes.length;
+  const vol = new Array(N).fill(null);
+  const rets = new Array(N).fill(0);
+  for (let i = 1; i < N; i++) rets[i] = (closes[i] - closes[i-1]) / closes[i-1];
+  for (let i = period; i < N; i++) {
+    let mean = 0;
+    for (let j = i - period + 1; j <= i; j++) mean += rets[j];
+    mean /= period;
+    let variance = 0;
+    for (let j = i - period + 1; j <= i; j++) variance += (rets[j] - mean) ** 2;
+    variance /= period;
+    vol[i] = Math.sqrt(variance) * Math.sqrt(252);
+  }
+  return vol;
+}
+
+// ================ TQWD SIMULATE (CORE ENGINE) ================
+function simulateTQWD(qqqDaily, opts = {}) {
+  const cfg = Object.assign({
+    leverage: 3.0,
+    emaPeriod: 200,
+    momPeriod: 20,
+    volPeriod: 20,
+    volTarget: 0.15,
+    yearlyDrag: 0.0084,
+    startDate: '2008-01-01',
+    endDate: '2025-12-31',
+    randomSignal: false,
+    randomSeed: 12345,
+    signalLag: 0,
+    closesOverride: null,
+    signalArray: null,
+    // 휩소 방지 옵션
+    entryThreshold: 0,    // mom20 > +X% 진입 (default 0)
+    exitThreshold: 0,     // mom20 < -X% 청산 (default 0, asymm 가능)
+    confirmDays: 1,       // N일 연속 신호 일치 필요 (진입+청산 모두)
+    exitConfirmDays: 0,   // 청산만 별도 (0=confirmDays 사용, >0이면 진입과 분리)
+    smoothMomDays: 1,     // mom 평균화 (1=원본)
+    reentryCooldown: 0,   // 청산 후 N일 진입 금지
+    entryDelay: 0,        // 진입 지연: 0=금요일 종가 매수(베이스), 1=월요일 종가, 2=화요일
+    exitDelayImmediate: false, // 청산: false = 다음날 종가 (베이스), true = 당일 종가 즉시
+    entryDay: -1,         // 매수 요일: -1=isLastOfWeek(베이스, 금), 1=월, 2=화, 3=수, 4=목, 5=금
+    stopLossDD: 0,        // 자산 DD 기반 강제 청산: 0=비활성, -0.20=-20%일 때 강제 청산
+    macroFilterMaxVol: 0, // 매크로 필터: 0=비활성, 0.40=vol20 > 40%일 때 진입 차단
+    ddLadder: null,       // DD ladder 청산: null=비활성, [-0.35, -0.45, -0.55]=3단계 1/3씩 청산
+    inverseWeight: 0,     // 신호 OFF 시 SQQQ 비중: 0=비활성, 0.05=5% SQQQ 보유
+    inverseLeverage: -3,  // SQQQ는 QQQ의 -3배 (반대)
+    inverseDrag: 0.04,    // SQQQ 운용비 (TQQQ보다 약간 높음)
+    deepDropThreshold: -0.30, // 고점 대비 -30% 시 진입 조건 완화 (43번 챔피언)
+    deepDropMode: 'emaOnly',  // 위기 시 100d EMA만 보고 진입 (mom 무시)
+    deepDropEMA: 100,         // 위기 시기 사용할 EMA 기간: 100일
+    deepDropExit: 'sticky',   // 한 번 활성 시 새 고점까지 유지
+    deepDropExitSignal: 'normal', // 청산은 항상 일반 신호 (200d + mom20) 유지 - 44번 검증
+    dailyDropStop: -0.05, // 일별 -5% 하락 시 즉시 매도 (50번 챔피언, QQQ 기준 = TQQQ -15%)
+    exitAtNextOpen: true, // 신호 OFF 시 다음날 시초가 청산 (49번 발견, 한국 23:00 매매)
+    entryAtNextOpen: true, // 신호 ON 시 다음날 시초가 매수 (49번 발견)
+    profitTake1: 0,       // 1차 부분 익절: 진입 자산 대비 +X% 도달 시 절반 매도 (0=비활성)
+    profitTake2: 0,       // 2차 부분 익절: +Y% 도달 시 추가 절반 매도 (0=비활성)
+    exitStaging: null,    // 분할 청산 비율 배열: 예 [0.5, 1.0] = 첫 OFF 신호 시 50%, 다음 OFF 시 100% (=전량). null=비활성 (한 번에 100%)
+    exitStagingType: 'sequential',
+    disableVolRebal: false, // true: 보유 중 vol cap 리밸 비활성 (진입 시 비중만 결정, 그 후 변경 X)
+    volRebalThreshold: 0.05, // 보유 중 비중 변경 임계치 (5% 이상 차이 시 리밸)
+    fullPosition: false,  // true: vol cap 무시, 신호 ON 시 100% 풀매수 (단순 운영)
+    hybridMode: true,     // ⭐ 챔피언 디폴트: 일반 시기 = Full 100%, 위기 시기 = Vol cap (58번 강건성 통과)
+  }, opts);
+  
+  const closes = cfg.closesOverride || qqqDaily.map(d => d.close);
+  const ema = buildEMA(closes, cfg.emaPeriod);
+  const mom = buildMom(closes, cfg.momPeriod);
+  const vol = buildVol(closes, cfg.volPeriod);
+  
+  // Deep drop용 추가 EMA (위기 시 사용)
+  const deepDropEMA = cfg.deepDropEMA > 0 ? buildEMA(closes, cfg.deepDropEMA) : null;
+  
+  // Smoothed mom (옵션)
+  let momUsed = mom;
+  if (cfg.smoothMomDays > 1) {
+    momUsed = new Array(closes.length).fill(null);
+    for (let i = cfg.smoothMomDays - 1; i < closes.length; i++) {
+      let sum = 0, count = 0;
+      for (let j = i - cfg.smoothMomDays + 1; j <= i; j++) {
+        if (mom[j] !== null) { sum += mom[j]; count++; }
+      }
+      momUsed[i] = count > 0 ? sum / count : null;
+    }
+  }
+  
+  let equity = 1.0, peak = 1.0, maxDD = 0;
+  let cyclePeak = 1.0; // 현재 진입 사이클 peak (DD ladder용)
+  let signalOffPrice = null; // 신호 OFF 발견 시점 가격 (pendingSellStop용)
+  let entryEquity = null;    // 매수 시점 자산 (profit take용)
+  let pt1Done = false;       // 1차 익절 발동 여부
+  let pt2Done = false;       // 2차 익절 발동 여부
+  let exitStage = 0;         // 분할 청산 단계 (exitStaging용)
+  let weight = 0;
+  let pendingWeight = null;
+  let pendingDelayLeft = 0; // 카운트다운: pendingWeight 적용까지 남은 일수
+  let prevPrice = null;
+  let buyCount = 0, sellCount = 0;
+  let totalDays = 0, exposureSum = 0;
+  let ladderStage = 0; // DD ladder 발동 단계
+  const dailyDrag = cfg.yearlyDrag / 252;
+  const equityCurve = [];
+  const yearlyReturns = {};
+  const yearlyStats = {};
+  const trades = []; // {date, type, price, weight, equity}
+  
+  let rng = null;
+  if (cfg.randomSignal) rng = mulberry32(cfg.randomSeed);
+  
+  const startIdx = Math.max(250, cfg.emaPeriod + 50);
+  let cooldownLeft = 0;
+  let entryConfirmStreak = 0;
+  let exitConfirmStreak = 0;
+  
+  // === 위기 모드 peak: 시뮬 시작일 이전 전체 데이터로 미리 계산 ===
+  // 시뮬 startDate 이전 데이터 사용해 누적 고점 추적 (look-ahead 아님 — 과거 데이터)
+  let qqqPeak = 0;
+  let deepDropActive = false;
+  let deepDropCycleLow = 0;
+  
+  if (cfg.deepDropThreshold < 0 && cfg.deepDropMode !== 'none') {
+    // startDate 이전 모든 거래일에 대해 peak 계산
+    for (let j = 0; j < qqqDaily.length; j++) {
+      if (qqqDaily[j].date >= cfg.startDate) break;
+      if (closes[j] > qqqPeak) qqqPeak = closes[j];
+    }
+    // 시뮬 시작 시점에 이미 위기 모드인지 확인 (sticky 모드)
+    if (qqqPeak > 0 && cfg.deepDropExit !== 'instant') {
+      // startDate 직전 가격으로 DD 계산
+      let lastPriceBeforeStart = 0;
+      for (let j = 0; j < qqqDaily.length; j++) {
+        if (qqqDaily[j].date >= cfg.startDate) break;
+        lastPriceBeforeStart = closes[j];
+      }
+      if (lastPriceBeforeStart > 0) {
+        const initialDD = (lastPriceBeforeStart - qqqPeak) / qqqPeak;
+        if (initialDD <= cfg.deepDropThreshold) {
+          deepDropActive = true;
+          deepDropCycleLow = lastPriceBeforeStart;
+        }
+      }
+    }
+  }
+  
+  for (let i = startIdx; i < qqqDaily.length; i++) {
+    const d = qqqDaily[i];
+    if (d.date < cfg.startDate || d.date > cfg.endDate) {
+      prevPrice = closes[i];
+      continue;
+    }
+    
+    // === 1단계: 가격 변동을 weight 변경 전에 먼저 적용 ===
+    // → 진입: 금요일 신호 → 월요일 시작에 weight 적용 BUT 월요일 변동(금→월)은 weight=0 상태
+    //   → 월요일 종가에 매수 효과 (T+1)
+    // → 청산: 화요일 신호 OFF → 수요일 시작에 weight=0 적용 BUT 수요일 변동(화→수)은 weight>0 상태
+    //   → 수요일 종가에 매도 효과 (T+1)
+    if (prevPrice !== null && weight > 0) {
+      // 매도 pending + 시초가 청산 옵션 → 갭만 받고 매도
+      let ret;
+      const isPendingExit = pendingWeight === 0 && pendingDelayLeft <= 0;
+      if (cfg.exitAtNextOpen && isPendingExit) {
+        // 시초가까지만 변동 받음 (전일 종가 → 오늘 시초가)
+        const opnVal = qqqDaily[i].open || closes[i]; // open 없으면 close 폴백
+        ret = (opnVal - prevPrice) / prevPrice;
+      } else {
+        ret = (closes[i] - prevPrice) / prevPrice;
+      }
+      const portRet = weight * (cfg.leverage * ret - dailyDrag);
+      const startEq = equity;
+      equity *= (1 + portRet);
+      if (equity > peak) peak = equity;
+      if (equity > cyclePeak) cyclePeak = equity;
+      const dd = (equity - peak) / peak;
+      if (dd < maxDD) maxDD = dd;
+      const cycleDD = (equity - cyclePeak) / cyclePeak;
+      
+      // Yearly return
+      const yr = d.date.slice(0, 4);
+      if (!yearlyReturns[yr]) yearlyReturns[yr] = {start: startEq, end: equity};
+      else yearlyReturns[yr].end = equity;
+      
+      // === 일별 변동 Stop Loss (한국 시간 운영 보호) ===
+      // 화요일 장 시작 전 신호 ON → 장중 큰 하락 → 자동 매도 (T+0)
+      // ret = QQQ 일별 변동 (TQQQ는 -3배 효과)
+      // dailyDropStop = QQQ 일별 변동 임계치 (예: -0.05 = QQQ -5% 시 TQQQ -15%)
+      if (cfg.dailyDropStop < 0 && ret <= cfg.dailyDropStop) {
+        sellCount++;
+        trades.push({date: d.date, type: 'SELL', price: closes[i], weight: 0, equity, reason: `DAILY_${(cfg.dailyDropStop*100).toFixed(0)}%`});
+        weight = 0;
+        cooldownLeft = cfg.reentryCooldown;
+      }
+      
+      // DD Stop Loss (자산 DD 기반, 기존)
+      if (cfg.stopLossDD < 0 && dd <= cfg.stopLossDD && weight > 0) {
+        sellCount++;
+        trades.push({date: d.date, type: 'SELL', price: closes[i], weight: 0, equity, reason: 'DD_STOP'});
+        weight = 0;
+        cooldownLeft = cfg.reentryCooldown;
+      }
+      
+      // === 부분 익절 (Profit Taking) ===
+      // 진입 자산 대비 +X% 도달 시 비중 절반 매도 → 현금 보유
+      // 신호 OFF까지 그 비중 유지 → 청산 시 전량 매도
+      if (weight > 0 && entryEquity !== null) {
+        const cycleProfit = (equity - entryEquity) / entryEquity;
+        
+        // 1차 익절
+        if (cfg.profitTake1 > 0 && !pt1Done && cycleProfit >= cfg.profitTake1) {
+          weight *= 0.5;
+          pt1Done = true;
+          sellCount++;
+          trades.push({date: d.date, type: 'PARTIAL_SELL', price: closes[i], weight, equity, reason: `PT1_${(cfg.profitTake1*100).toFixed(0)}%`});
+        }
+        
+        // 2차 익절 (남은 보유 중 절반)
+        if (cfg.profitTake2 > 0 && !pt2Done && cycleProfit >= cfg.profitTake2) {
+          weight *= 0.5;
+          pt2Done = true;
+          sellCount++;
+          trades.push({date: d.date, type: 'PARTIAL_SELL', price: closes[i], weight, equity, reason: `PT2_${(cfg.profitTake2*100).toFixed(0)}%`});
+        }
+      }
+      
+      // DD Ladder
+      if (cfg.ddLadder && cfg.ddLadder.length > 0 && weight > 0 && ladderStage < cfg.ddLadder.length) {
+        if (cycleDD <= cfg.ddLadder[ladderStage]) {
+          const remainingStages = cfg.ddLadder.length - ladderStage;
+          const exitFraction = 1 / remainingStages;
+          weight *= (1 - exitFraction);
+          ladderStage++;
+          trades.push({date: d.date, type: weight < 0.01 ? 'SELL' : 'PARTIAL_SELL', price: closes[i], weight, equity, reason: `LADDER_${(cfg.ddLadder[ladderStage-1]*100).toFixed(0)}%`});
+          if (weight < 0.01) {
+            weight = 0;
+            sellCount++;
+            cooldownLeft = cfg.reentryCooldown;
+          }
+        }
+      }
+    } else if (prevPrice !== null && weight === 0 && cfg.inverseWeight > 0) {
+      // 신호 OFF 시 SQQQ 보유 (인버스 hedge)
+      const ret = (closes[i] - prevPrice) / prevPrice;
+      const inverseDailyDrag = cfg.inverseDrag / 252;
+      const inversePortRet = cfg.inverseWeight * (cfg.inverseLeverage * ret - inverseDailyDrag);
+      const startEq = equity;
+      equity *= (1 + inversePortRet);
+      if (equity > peak) peak = equity;
+      if (equity > cyclePeak) cyclePeak = equity;
+      const dd = (equity - peak) / peak;
+      if (dd < maxDD) maxDD = dd;
+      
+      const yr = d.date.slice(0, 4);
+      if (!yearlyReturns[yr]) yearlyReturns[yr] = {start: startEq, end: equity};
+      else yearlyReturns[yr].end = equity;
+    }
+    
+    // === 2단계: 가격 변동 후 weight 변경 적용 (T+1 체결) ===
+    if (pendingWeight !== null && pendingDelayLeft <= 0) {
+      const wasZero = (weight === 0);
+      if (weight === 0 && pendingWeight > 0) {
+        buyCount++;
+        const buyPrice = cfg.entryAtNextOpen && qqqDaily[i].open ? qqqDaily[i].open : closes[i];
+        trades.push({date: d.date, type: 'BUY', price: buyPrice, weight: pendingWeight, equity});
+        ladderStage = 0; // DD ladder 리셋
+        cyclePeak = equity; // 새 사이클 peak 시작
+        signalOffPrice = null; // 신호 OFF 가격 리셋
+        entryEquity = equity; // 진입 자산 저장 (부분 익절용)
+        pt1Done = false; // 익절 플래그 리셋
+        pt2Done = false;
+        exitStage = 0; // 분할 청산 단계 리셋
+      }
+      if (weight > 0 && pendingWeight === 0) {
+        sellCount++;
+        const sellPrice = cfg.exitAtNextOpen && qqqDaily[i].open ? qqqDaily[i].open : closes[i];
+        trades.push({date: d.date, type: 'SELL', price: sellPrice, weight: 0, equity});
+        signalOffPrice = null;
+        entryEquity = null;
+      }
+      // 부분 매도 (비중 감소): vol cap 리밸 또는 분할 청산
+      if (weight > 0 && pendingWeight !== null && pendingWeight > 0 && pendingWeight < weight) {
+        sellCount++;
+        const sellPrice = cfg.exitAtNextOpen && qqqDaily[i].open ? qqqDaily[i].open : closes[i];
+        // 분할 청산 단계 진행 중 vs 단순 vol cap 비중 조정
+        const isStaged = cfg.exitStaging && cfg.exitStaging.length > 0 && exitStage > 0;
+        const reason = isStaged ? `STAGE_${exitStage}` : 'VOL_REBAL';
+        trades.push({date: d.date, type: 'PARTIAL_SELL', price: sellPrice, weight: pendingWeight, equity, reason});
+      }
+      // 추가 매수 (비중 증가): vol cap 리밸 (vol 감소로 비중 늘림)
+      if (weight > 0 && pendingWeight !== null && pendingWeight > weight) {
+        buyCount++;
+        const buyPrice = cfg.entryAtNextOpen && qqqDaily[i].open ? qqqDaily[i].open : closes[i];
+        trades.push({date: d.date, type: 'PARTIAL_BUY', price: buyPrice, weight: pendingWeight, equity, reason: 'VOL_REBAL'});
+      }
+      
+      // === 시초가 매수 시: 그날 (시초가 → 종가) 변동을 추가로 받음 ===
+      const isBuyTransition = wasZero && pendingWeight > 0;
+      if (cfg.entryAtNextOpen && isBuyTransition && qqqDaily[i].open) {
+        const opnVal = qqqDaily[i].open;
+        const intraday_ret = (closes[i] - opnVal) / opnVal;
+        const intraday_portRet = pendingWeight * (cfg.leverage * intraday_ret);
+        const startEq = equity;
+        equity *= (1 + intraday_portRet);
+        if (equity > peak) peak = equity;
+        if (equity > cyclePeak) cyclePeak = equity;
+        const dd = (equity - peak) / peak;
+        if (dd < maxDD) maxDD = dd;
+        // yearly 갱신
+        const yr = d.date.slice(0, 4);
+        if (yearlyReturns[yr]) yearlyReturns[yr].end = equity;
+      }
+      
+      weight = pendingWeight;
+      pendingWeight = null;
+    } else if (pendingDelayLeft > 0) {
+      pendingDelayLeft--;
+    }
+    
+    // 기존 stop loss 로직 (entryPrice 기반) 제거됨
+    // → pendingSellStop은 청산 신호 평가 부분에서 처리
+    
+    if (weight > 0) exposureSum += weight;
+    totalDays++;
+    
+    // Yearly cash tracking
+    const yr = d.date.slice(0, 4);
+    if (!yearlyStats[yr]) yearlyStats[yr] = {cashSum: 0, daysCount: 0, exposureSum: 0};
+    yearlyStats[yr].cashSum += (1 - weight);
+    yearlyStats[yr].daysCount++;
+    yearlyStats[yr].exposureSum += weight;
+    
+    equityCurve.push({date: d.date, equity, weight});
+    
+    // Eval timing (Hybrid)
+    const dow = new Date(d.date + 'T00:00:00Z').getUTCDay();
+    const nextI = i + 1;
+    const isLastOfWeek = nextI >= qqqDaily.length || 
+      new Date(qqqDaily[nextI].date + 'T00:00:00Z').getUTCDay() < dow;
+    
+    // Signal with optional lag (look-ahead diagnostic)
+    const sigIdx = Math.max(0, i - cfg.signalLag);
+    const eVal = ema[sigIdx];
+    const mVal = momUsed[sigIdx];  // smoothed if applicable
+    const vVal = vol[sigIdx];
+    const sigClose = closes[sigIdx];
+    
+    // Cooldown 감소
+    if (cooldownLeft > 0) cooldownLeft--;
+    
+    // 진입 조건 (asymmetric thresholds)
+    let entrySig, exitSig;
+    if (cfg.signalArray) {
+      entrySig = exitSig = cfg.signalArray[sigIdx] || false;
+    } else if (cfg.randomSignal && rng) {
+      const rs = rng() < 0.60;
+      entrySig = exitSig = rs;
+    } else {
+      const emaOk = eVal !== null && sigClose > eVal;
+      // 진입: mom > +entryThreshold
+      entrySig = emaOk && mVal !== null && mVal > cfg.entryThreshold;
+      // 청산: mom < -exitThreshold (즉 보유 유지 = mom > -exitThreshold)
+      exitSig = emaOk && mVal !== null && mVal > -cfg.exitThreshold;
+      
+      // === Deep Drop 완화 (QQQ 고점 -X% 시) ===
+      if (cfg.deepDropThreshold < 0 && cfg.deepDropMode !== 'none') {
+        // QQQ 고점 갱신
+        if (closes[i] > qqqPeak) {
+          qqqPeak = closes[i];
+          // 새 고점 → 위기 모드 종료 (모든 모드에서 공통)
+          deepDropActive = false;
+          deepDropCycleLow = closes[i];
+        }
+        const qqqDD = qqqPeak > 0 ? (closes[i] - qqqPeak) / qqqPeak : 0;
+        
+        // 사이클 최저점 추적
+        if (closes[i] < deepDropCycleLow || deepDropCycleLow === 0) deepDropCycleLow = closes[i];
+        
+        // 위기 모드 활성화 조건 (deepDropExit 모드별)
+        if (cfg.deepDropExit === 'instant') {
+          // 베이스: 매일 평가, 현재 DD가 임계치 이하면 활성
+          deepDropActive = qqqDD <= cfg.deepDropThreshold;
+        } else if (cfg.deepDropExit === 'newPeak') {
+          // 한 번 활성 시 새 고점까지 유지 (위 if문에서 false 처리)
+          if (!deepDropActive && qqqDD <= cfg.deepDropThreshold) deepDropActive = true;
+        } else if (cfg.deepDropExit === 'partial') {
+          // 한 번 활성 시 임계치의 50% 회복 시 종료
+          // 예: -30% 활성 → -15% 도달 시 종료
+          if (!deepDropActive && qqqDD <= cfg.deepDropThreshold) deepDropActive = true;
+          else if (deepDropActive && qqqDD > cfg.deepDropThreshold * 0.5) deepDropActive = false;
+        } else if (cfg.deepDropExit === 'sticky') {
+          // 한 번 활성 시 새 고점까지 유지 (newPeak와 동일)
+          if (!deepDropActive && qqqDD <= cfg.deepDropThreshold) deepDropActive = true;
+        }
+        
+        if (deepDropActive) {
+          // 진입 조건 완화
+          // 위기 시기 사용할 EMA (deepDropEMA가 0보다 크면 그것 사용)
+          const dropEmaVal = deepDropEMA ? deepDropEMA[sigIdx] : eVal;
+          const dropEmaOk = dropEmaVal !== null && sigClose > dropEmaVal;
+          
+          if (cfg.deepDropMode === 'momOnly') {
+            // EMA 무시, mom만 체크
+            entrySig = mVal !== null && mVal > cfg.entryThreshold;
+          } else if (cfg.deepDropMode === 'emaOnly') {
+            // mom 무시, 위기용 EMA만 체크 (50/100/150/200 등)
+            entrySig = dropEmaOk;
+          } else if (cfg.deepDropMode === 'always') {
+            // 둘 다 무시 → 항상 진입 가능
+            entrySig = true;
+          } else if (cfg.deepDropMode === 'emaAndMom') {
+            // 위기용 EMA + mom (기본 200d EMA 대신 짧은 EMA)
+            entrySig = dropEmaOk && mVal !== null && mVal > cfg.entryThreshold;
+          }
+          
+          // 청산 신호도 변경 (위기 모드 시)
+          if (cfg.deepDropExitSignal === 'shortEMA') {
+            // 위기용 EMA만 보고 청산 (mom 무시)
+            // EMA 깨면 즉시 청산
+            exitSig = dropEmaOk;
+          } else if (cfg.deepDropExitSignal === 'shortEMA+mom') {
+            // 위기용 EMA + mom (기본 200d EMA 대신 짧은 EMA)
+            exitSig = dropEmaOk && mVal !== null && mVal > -cfg.exitThreshold;
+          }
+          // 'normal'은 변경 X (베이스: 200d EMA + mom20)
+        }
+      }
+    }
+    
+    // Confirmation tracking (N일 연속)
+    if (entrySig) entryConfirmStreak++; else entryConfirmStreak = 0;
+    if (!exitSig) exitConfirmStreak++; else exitConfirmStreak = 0;
+    
+    const entryConfirmed = entryConfirmStreak >= cfg.confirmDays;
+    const exitConfirmDaysActual = cfg.exitConfirmDays > 0 ? cfg.exitConfirmDays : cfg.confirmDays;
+    const exitConfirmed = exitConfirmStreak >= exitConfirmDaysActual;
+    
+    if (weight === 0) {
+      const isEntryDay = cfg.entryDay >= 0 ? dow === cfg.entryDay : isLastOfWeek;
+      const macroOK = cfg.macroFilterMaxVol === 0 || (vVal !== null && vVal < cfg.macroFilterMaxVol);
+      if (isEntryDay && entryConfirmed && cooldownLeft === 0 && macroOK) {
+        let modifier = 1.0;
+        if (cfg.fullPosition) {
+          modifier = 1.0;
+        } else if (cfg.hybridMode) {
+          // 위기 모드일 때만 vol cap 적용, 평상시 100% 풀매수
+          if (deepDropActive && vVal !== null && vVal > 0) {
+            modifier = Math.min(1, cfg.volTarget / vVal);
+          } else {
+            modifier = 1.0;
+          }
+        } else if (vVal !== null && vVal > 0) {
+          modifier = Math.min(1, cfg.volTarget / vVal);
+        }
+        pendingWeight = modifier;
+        pendingDelayLeft = cfg.entryDelay;
+      }
+    } else {
+      if (exitConfirmed) {
+        if (cfg.exitDelayImmediate) {
+          // 당일 종가 즉시 청산 (T+0)
+          if (cfg.exitStaging && cfg.exitStaging.length > 0 && exitStage < cfg.exitStaging.length) {
+            const exitFrac = cfg.exitStaging[exitStage];
+            const targetW = weight * (1 - exitFrac);
+            sellCount++;
+            trades.push({date: d.date, type: targetW < 0.01 ? 'SELL' : 'PARTIAL_SELL', price: closes[i], weight: targetW, equity, reason: `STAGE_${exitStage}`});
+            weight = targetW;
+            exitStage++;
+            if (weight < 0.01) {
+              weight = 0;
+              cooldownLeft = cfg.reentryCooldown;
+            }
+          } else {
+            sellCount++;
+            trades.push({date: d.date, type: 'SELL', price: closes[i], weight: 0, equity});
+            weight = 0;
+            cooldownLeft = cfg.reentryCooldown;
+          }
+        } else {
+          // T+1 청산 (pendingWeight)
+          if (cfg.exitStaging && cfg.exitStaging.length > 0 && exitStage < cfg.exitStaging.length) {
+            const exitFrac = cfg.exitStaging[exitStage];
+            const targetW = weight * (1 - exitFrac);
+            pendingWeight = targetW < 0.01 ? 0 : targetW;
+            pendingDelayLeft = 0;
+            exitStage++;
+            if (pendingWeight === 0) cooldownLeft = cfg.reentryCooldown;
+          } else {
+            pendingWeight = 0;
+            pendingDelayLeft = 0;
+            cooldownLeft = cfg.reentryCooldown;
+          }
+        }
+      } else if (!cfg.disableVolRebal && !cfg.fullPosition && vVal !== null && vVal > 0) {
+        // 하이브리드 모드: 위기 시기만 리밸, 평상시는 100% 유지
+        const shouldRebal = !cfg.hybridMode || deepDropActive;
+        if (shouldRebal) {
+          const newW = Math.min(1, cfg.volTarget / vVal);
+          if (Math.abs(newW - weight) > cfg.volRebalThreshold) {
+            pendingWeight = newW;
+            pendingDelayLeft = 0;
+          }
+        }
+      }
+    }
+    
+    prevPrice = closes[i];
+  }
+  
+  const start = new Date(cfg.startDate);
+  const end = new Date(cfg.endDate);
+  const years = (end - start) / (365.25 * 86400 * 1000);
+  const cagr = years > 0 ? Math.pow(equity, 1/years) - 1 : 0;
+  
+  return {
+    cagr, mdd: maxDD,
+    rar: maxDD === 0 ? 0 : cagr / Math.abs(maxDD),
+    finalEquity: equity,
+    buyCount, sellCount,
+    avgExposure: totalDays > 0 ? exposureSum / totalDays : 0,
+    years,
+    equityCurve,
+    yearlyReturns,
+    yearlyStats,
+    trades
+  };
+}
+
+
+// ============== 데이터 fetch ==============
+const TD_KEY = 'aa87760dae7b4654a35d136302b3ea0e';
+const CACHE_KEY = 'tqwd_tracker_v5';
+const USER_INPUT_KEY = 'tqwd_tracker_inputs_v5';
+
+async function fetchQQQ() {
+  const end = new Date();
+  const start = new Date(end.getFullYear() - 2, 0, 1);
+  const fmt = d => d.toISOString().slice(0, 10);
+  const url = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&start_date=${fmt(start)}&end_date=${fmt(end)}&apikey=${TD_KEY}&outputsize=5000`;
+  const res = await fetch(url);
+  const j = await res.json();
+  if (!j.values) throw new Error(j.message || 'fetch 실패');
+  return j.values.map(v => ({
+    date: v.datetime,
+    open: parseFloat(v.open),
+    close: parseFloat(v.close),
+  })).filter(d => !isNaN(d.close) && d.close > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function ensureData() {
+  const now = Date.now();
+  // v9 캐시 우선
+  try {
+    const v9 = localStorage.getItem('tqwd_daily_cache');
+    if (v9) {
+      const p = JSON.parse(v9);
+      const age = (now - p.timestamp) / 3600000;
+      if (age < 168 && p.data && p.data.QQQ && p.data.QQQ.length > 200) {
+        showCacheStatus(p.timestamp, 'v9 공유');
+        return p.data.QQQ;
+      }
+    }
+  } catch (e) {}
+  
+  // 트래커 캐시
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const p = JSON.parse(cached);
+      const age = (now - p.timestamp) / 3600000;
+      if (age < 12 && p.data && p.data.length > 200) {
+        showCacheStatus(p.timestamp, '트래커');
+        return p.data;
+      }
+    }
+  } catch (e) {}
+  
+  // 직접 fetch
+  const data = await fetchQQQ();
+  localStorage.setItem(CACHE_KEY, JSON.stringify({timestamp: now, data}));
+  showCacheStatus(now, '신규');
+  return data;
+}
+
+function showCacheStatus(ts, source) {
+  const ageMin = Math.floor((Date.now() - ts) / 60000);
+  const ageStr = ageMin < 60 ? `${ageMin}분 전` : `${Math.floor(ageMin/60)}시간 전`;
+  const el = document.getElementById('cacheStatus');
+  if (el) el.textContent = `💾 캐시(${source}): ${ageStr} 갱신`;
+}
+
+// ============== 사용자 입력 ==============
+function getUserInputs() {
+  try { return JSON.parse(localStorage.getItem(USER_INPUT_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function saveUserInput(key, field, value) {
+  const inputs = getUserInputs();
+  if (!inputs[key]) inputs[key] = {};
+  inputs[key][field] = value;
+  localStorage.setItem(USER_INPUT_KEY, JSON.stringify(inputs));
+}
+
+function clearUserInputs() {
+  if (!confirm('정말 모든 실제 체결 입력을 삭제할까요?')) return;
+  localStorage.removeItem(USER_INPUT_KEY);
+  if (window.__currentTrades) renderTradeTable(window.__currentTrades);
+}
+
+function exportCSV() {
+  const inputs = getUserInputs();
+  const trades = window.__currentTrades || [];
+  const rows = [['날짜', '종류', '시뮬가($)', '비중(%)', '체결', '실제가($)', '수량(주)', '메모']];
+  trades.forEach(t => {
+    const k = `${t.date}_${t.type}`;
+    const inp = inputs[k] || {};
+    rows.push([t.date, t.type, t.price.toFixed(2), (t.weight*100).toFixed(0),
+      inp.executed ? 'Y' : 'N', inp.actualPrice || '', inp.qty || '', inp.note || '']);
+  });
+  const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tqwd_trades_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function renderTradeTable(trades) {
+  const tbody = document.getElementById('tradeBody');
+  const inputs = getUserInputs();
+  
+  if (trades.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7d96;padding:20px;">2025년 이후 매매 없음</td></tr>';
+    return;
+  }
+  
+  const sorted = [...trades].reverse();
+  tbody.innerHTML = sorted.map(t => {
+    const k = `${t.date}_${t.type}`;
+    const inp = inputs[k] || {};
+    const tag = t.type === 'BUY' ? '<span class="tag-buy">🟢 매수</span>' :
+                t.type === 'PARTIAL_BUY' ? '<span class="tag-buy">🟢 추가매수</span>' :
+                t.type === 'PARTIAL_SELL' ? '<span class="tag-partial">🟡 부분매도</span>' :
+                '<span class="tag-sell">🔴 매도</span>';
+    const pendingTag = t.pending ? '<span class="tag-pending">대기</span> ' : '';
+    return `
+      <tr>
+        <td>${pendingTag}${t.date}</td>
+        <td>${tag}${t.reason ? '<br><span style="font-size:9px;color:#6b7d96;">'+t.reason+'</span>' : ''}</td>
+        <td>$${t.price.toFixed(2)}</td>
+        <td>${(t.weight*100).toFixed(0)}%</td>
+        <td><input type="checkbox" class="cb" ${inp.executed ? 'checked' : ''} onchange="saveUserInput('${k}', 'executed', this.checked)"></td>
+        <td><input type="number" step="0.01" placeholder="$" value="${inp.actualPrice || ''}" onchange="saveUserInput('${k}', 'actualPrice', this.value)"></td>
+        <td><input type="number" step="1" placeholder="주" value="${inp.qty || ''}" onchange="saveUserInput('${k}', 'qty', this.value)"></td>
+        <td><input type="text" placeholder="메모" value="${(inp.note || '').replace(/"/g, '&quot;')}" onchange="saveUserInput('${k}', 'note', this.value)"></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ============== 차트 ==============
+function drawPriceChart(canvasId, data, trades) {
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  
+  ctx.fillStyle = '#0a0e15';
+  ctx.fillRect(0, 0, W, H);
+  if (data.length === 0) return;
+  
+  const prices = data.map(d => d.close);
+  const minP = Math.min(...prices) * 0.98;
+  const maxP = Math.max(...prices) * 1.02;
+  const padL = 50, padR = 8, padT = 8, padB = 22;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  
+  ctx.strokeStyle = 'rgba(107,125,150,0.2)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#6b7d96';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = minP + (maxP - minP) * i / 4;
+    const y = padT + plotH * (1 - i/4);
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - padR, y);
+    ctx.stroke();
+    ctx.fillText('$' + v.toFixed(0), padL - 4, y + 3);
+  }
+  
+  const dateMap = {};
+  data.forEach((d, i) => { dateMap[d.date] = i; });
+  ctx.textAlign = 'center';
+  let lastMonth = -1;
+  data.forEach((d, i) => {
+    const mo = parseInt(d.date.slice(5, 7));
+    if (mo !== lastMonth) {
+      lastMonth = mo;
+      const x = padL + plotW * (i / Math.max(1, data.length - 1));
+      ctx.beginPath();
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, padT + plotH);
+      ctx.strokeStyle = 'rgba(107,125,150,0.15)';
+      ctx.stroke();
+      ctx.fillStyle = '#6b7d96';
+      ctx.fillText(`${mo}`, x, H - 6);
+    }
+  });
+  
+  ctx.strokeStyle = '#4dd0e1';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = padL + plotW * (i / Math.max(1, data.length - 1));
+    const y = padT + plotH * (1 - (d.close - minP) / (maxP - minP));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  trades.forEach(t => {
+    const idx = dateMap[t.date];
+    if (idx === undefined) return;
+    const x = padL + plotW * (idx / Math.max(1, data.length - 1));
+    const y = padT + plotH * (1 - (t.price - minP) / (maxP - minP));
+    if (t.type === 'BUY') {
+      ctx.fillStyle = '#4caf50';
+      ctx.beginPath();
+      ctx.moveTo(x, y - 14); ctx.lineTo(x - 7, y - 2); ctx.lineTo(x + 7, y - 2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+    } else {
+      ctx.fillStyle = t.type === 'PARTIAL_SELL' ? '#ff9800' : '#f44336';
+      ctx.beginPath();
+      ctx.moveTo(x, y + 14); ctx.lineTo(x - 7, y + 2); ctx.lineTo(x + 7, y + 2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+    }
+  });
+}
+
+function drawEquityChart(canvasId, curve, priceData) {
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  
+  ctx.fillStyle = '#0a0e15';
+  ctx.fillRect(0, 0, W, H);
+  if (curve.length === 0) return;
+  
+  const firstP = priceData[0].close;
+  const qqqCurve = priceData.map(d => ({date: d.date, normEq: d.close / firstP}));
+  
+  const allEq = curve.map(p => p.normEq).concat(qqqCurve.map(p => p.normEq));
+  const minE = Math.min(...allEq) * 0.98;
+  const maxE = Math.max(...allEq) * 1.02;
+  
+  const padL = 50, padR = 8, padT = 8, padB = 22;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  
+  ctx.strokeStyle = 'rgba(107,125,150,0.2)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#6b7d96';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = minE + (maxE - minE) * i / 4;
+    const y = padT + plotH * (1 - i/4);
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - padR, y);
+    ctx.stroke();
+    ctx.fillText(((v - 1) * 100).toFixed(1) + '%', padL - 4, y + 3);
+  }
+  
+  const yBase = padT + plotH * (1 - (1.0 - minE) / (maxE - minE));
+  ctx.strokeStyle = '#fff';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(padL, yBase);
+  ctx.lineTo(W - padR, yBase);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  ctx.strokeStyle = '#6b7d96';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  qqqCurve.forEach((p, i) => {
+    const x = padL + plotW * (i / Math.max(1, qqqCurve.length - 1));
+    const y = padT + plotH * (1 - (p.normEq - minE) / (maxE - minE));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  const lastEq = curve[curve.length-1].normEq;
+  ctx.strokeStyle = lastEq >= 1 ? '#4caf50' : '#f44336';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  curve.forEach((p, i) => {
+    const x = padL + plotW * (i / Math.max(1, curve.length - 1));
+    const y = padT + plotH * (1 - (p.normEq - minE) / (maxE - minE));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  ctx.textAlign = 'center';
+  let lastMonth = -1;
+  curve.forEach((p, i) => {
+    const mo = parseInt(p.date.slice(5, 7));
+    if (mo !== lastMonth) {
+      lastMonth = mo;
+      const x = padL + plotW * (i / Math.max(1, curve.length - 1));
+      ctx.fillStyle = '#6b7d96';
+      ctx.fillText(`${mo}`, x, H - 6);
+    }
+  });
+  
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = lastEq >= 1 ? '#4caf50' : '#f44336';
+  ctx.fillText('— TQWD', W - 100, padT + 12);
+  ctx.fillStyle = '#6b7d96';
+  ctx.fillText('— QQQ B&H', W - 100, padT + 26);
+}
+
+// ============== 메인 ==============
+async function render() {
+  const stat = document.getElementById('statusDisplay');
+  const banner = document.getElementById('alertBanner');
+  
+  try {
+    stat.className = 'status-big status-off';
+    stat.textContent = '⏳ 데이터 로드...';
+    
+    const data = await ensureData();
+    if (!data || data.length < 200) throw new Error(`데이터 부족: ${data ? data.length : 0}일`);
+    
+    stat.textContent = `⏳ 시뮬 중... (${data.length}일)`;
+    
+    // v9 엔진 그대로 시뮬 (디폴트 = 50번 챔피언)
+    const sim = simulateTQWD(data, {
+      startDate: data[0].date,
+      endDate: data[data.length - 1].date,
+    });
+    
+    const last = data[data.length - 1];
+    const lastIdx = data.length - 1;
+    
+    // 지표 (v9와 같은 방식으로 계산)
+    const closes = data.map(d => d.close);
+    const ema200 = buildEMA(closes, 200);
+    const ema100 = buildEMA(closes, 100);
+    const mom20 = buildMom(closes, 20);
+    const mom22 = buildMom(closes, 22);
+    const vol20 = buildVol(closes, 20);
+    
+    const e200 = ema200[lastIdx];
+    const e100 = ema100[lastIdx];
+    const m20 = mom20[lastIdx];
+    const m22 = mom22[lastIdx];
+    const v20 = vol20[lastIdx];
+    
+    // 위기 모드
+    let qqqPeak = 0;
+    let inCrisis = false;
+    for (let i = 0; i < closes.length; i++) {
+      if (closes[i] > qqqPeak) qqqPeak = closes[i];
+      const dd = (closes[i] - qqqPeak) / qqqPeak;
+      if (dd <= -0.30) inCrisis = true;
+      if (closes[i] >= qqqPeak) inCrisis = false;
+    }
+    
+    // 신호 (5050: TQQQ Mom 20 / QQQU Mom 22 양쪽)
+    let signalTQQQ, signalQQQU;
+    if (inCrisis) {
+      signalTQQQ = (e100 !== null && last.close > e100);
+      signalQQQU = signalTQQQ;
+    } else {
+      signalTQQQ = (e200 !== null && m20 !== null && last.close > e200 && m20 > 0);
+      signalQQQU = (e200 !== null && m22 !== null && last.close > e200 && m22 > 0);
+    }
+    const signalOn = signalTQQQ || signalQQQU;  // 둘 중 하나라도 ON
+    const volCapWt = v20 ? Math.min(1, 0.15 / v20) : 0;
+    const targetWtTqqq = signalTQQQ ? volCapWt : 0;
+    const targetWtQqqu = signalQQQU ? volCapWt : 0;
+    
+    // 현재 비중 (시뮬 마지막 상태)
+    const lastEqPoint = sim.equityCurve[sim.equityCurve.length - 1];
+    const currentWeight = lastEqPoint ? lastEqPoint.weight : 0;
+    
+    // 상태 표시 (양쪽 신호)
+    const tqqqStr = signalTQQQ ? '🟢' : '🔴';
+    const qqquStr = signalQQQU ? '🟢' : '🔴';
+    if (signalTQQQ && signalQQQU) {
+      stat.className = 'status-big status-on';
+      stat.textContent = `${tqqqStr} TQQQ ON · ${qqquStr} QQQU ON · 양쪽 보유`;
+    } else if (signalTQQQ || signalQQQU) {
+      stat.className = 'status-big status-on';
+      stat.textContent = `${tqqqStr} TQQQ · ${qqquStr} QQQU · 부분 보유`;
+    } else {
+      stat.className = 'status-big status-off';
+      stat.textContent = `${tqqqStr} TQQQ OFF · ${qqquStr} QQQU OFF · 현금`;
+    }
+    
+    document.getElementById('latestPrice').textContent = `$${last.close.toFixed(2)} (${last.date})`;
+    document.getElementById('ema200val').textContent = e200 ? `$${e200.toFixed(2)} (${last.close > e200 ? '⬆️ 위' : '⬇️ 아래'})` : '-';
+    document.getElementById('mom20val').textContent = m20 !== null ? `${(m20 * 100).toFixed(2)}% (${m20 > 0 ? '⬆️ ON' : '⬇️ OFF'})` : '-';
+    document.getElementById('mom22val').textContent = m22 !== null ? `${(m22 * 100).toFixed(2)}% (${m22 > 0 ? '⬆️ ON' : '⬇️ OFF'})` : '-';
+    document.getElementById('vol20val').textContent = v20 ? `${(v20 * 100).toFixed(1)}%` : '-';
+    document.getElementById('targetWtTqqq').textContent = `${(targetWtTqqq * 100).toFixed(0)}% ${signalTQQQ ? '🟢' : '🔴 현금'}${inCrisis ? ' ⚠️' : ''}`;
+    document.getElementById('targetWtQqqu').textContent = `${(targetWtQqqu * 100).toFixed(0)}% ${signalQQQU ? '🟢' : '🔴 현금'}${inCrisis ? ' ⚠️' : ''}`;
+    document.getElementById('lastUpd').textContent = `최신: ${last.date}`;
+    
+    // Alert (양쪽 신호 따로)
+    let alertHtml = '';
+    if (signalTQQQ && signalQQQU) {
+      alertHtml = '<div class="alert-banner alert-hold">📌 양쪽 신호 ON · 보유 유지 (Mom 20/22 모두 양수)</div>';
+    } else if (signalTQQQ && !signalQQQU) {
+      alertHtml = '<div class="alert-banner alert-hold">⚡ TQQQ ON / QQQU OFF — Mom 22 약세 (QQQU 청산)</div>';
+    } else if (!signalTQQQ && signalQQQU) {
+      alertHtml = '<div class="alert-banner alert-hold">⚡ TQQQ OFF / QQQU ON — Mom 20 약세 (TQQQ 청산)</div>';
+    } else {
+      alertHtml = '<div class="alert-banner alert-sell">🔴 양쪽 OFF · 현금 유지</div>';
+    }
+    banner.innerHTML = alertHtml;
+    
+    // 라이브 차트 (2025~)
+    const liveData = data.filter(d => d.date >= '2025-01-01');
+    const tradesLive = sim.trades.filter(t => t.date >= '2025-01-01');
+    const curveLive = sim.equityCurve.filter(p => p.date >= '2025-01-01');
+    
+    if (curveLive.length > 0 && liveData.length > 0) {
+      const startEq = curveLive[0].equity;
+      curveLive.forEach(p => p.normEq = p.equity / startEq);
+      
+      const lastNorm = curveLive[curveLive.length - 1].normEq;
+      const ret = (lastNorm - 1) * 100;
+      const firstP = liveData[0].close;
+      const lastP = liveData[liveData.length - 1].close;
+      const qqqRet = (lastP / firstP - 1) * 100;
+      const buys = tradesLive.filter(t => t.type === 'BUY').length;
+      const sells = tradesLive.filter(t => t.type === 'SELL' || t.type === 'PARTIAL_SELL').length;
+      
+      document.getElementById('liveSummary').innerHTML = 
+        `TQWD <b style="color:${ret >= 0 ? '#4caf50' : '#f44336'};">${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%</b> · QQQ ${qqqRet >= 0 ? '+' : ''}${qqqRet.toFixed(1)}% · 알파 ${(ret-qqqRet) >= 0 ? '+' : ''}${(ret-qqqRet).toFixed(1)}%p · 매수 ${buys}회/매도 ${sells}회`;
+      
+      drawPriceChart('chartPrice', liveData, tradesLive);
+      drawEquityChart('chartEquity', curveLive, liveData);
+    }
+    
+    // 매매 테이블 + 대기 상태
+    const allTrades = [...tradesLive];
+    if (signalOn && currentWeight === 0) {
+      allTrades.push({date: 'NEXT', type: 'BUY', price: last.close, weight: targetWt, pending: true, reason: '시초가 매수 대기'});
+    } else if (!signalOn && currentWeight > 0) {
+      allTrades.push({date: 'NEXT', type: 'SELL', price: last.close, weight: 0, pending: true, reason: '시초가 매도 대기'});
+    }
+    window.__currentTrades = allTrades;
+    renderTradeTable(allTrades);
+    
+  } catch (e) {
+    console.error(e);
+    stat.className = 'status-big status-off';
+    stat.textContent = '❌ 오류';
+    banner.innerHTML = `<div class="alert-banner alert-sell" style="white-space:pre-wrap;">❌ ${e.message}\n\n해결:\n1. v9를 같은 폴더에서 한 번 열어 백테 실행\n2. 캐시 공유 후 트래커 다시 열기</div>`;
+  }
+}
+
+async function refreshData() {
+  localStorage.removeItem(CACHE_KEY);
+  await render();
+}
+
+function switchTab(name) {
+  document.getElementById('pageMain').style.display = name === 'main' ? '' : 'none';
+  document.getElementById('pageGuide').style.display = name === 'guide' ? '' : 'none';
+  
+  const btnMain = document.getElementById('tabMain');
+  const btnGuide = document.getElementById('tabGuide');
+  if (name === 'main') {
+    btnMain.style.background = 'var(--cy)';
+    btnMain.style.color = '#000';
+    btnGuide.style.background = 'var(--border)';
+    btnGuide.style.color = 'var(--txt)';
+  } else {
+    btnGuide.style.background = 'var(--cy)';
+    btnGuide.style.color = '#000';
+    btnMain.style.background = 'var(--border)';
+    btnMain.style.color = 'var(--txt)';
+  }
+}
+
+render();
+</script>
+</body>
+</html>
